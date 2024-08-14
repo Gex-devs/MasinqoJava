@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:id="@+id/audio_item">
+    
+    <ImageView
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:id="@+id/audio_icon"
+        android:src="@drawable/ic_launcher_background"
+        android:contentDescription="albumArt"
+        android:padding="5dp"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="File Name"
+        android:layout_toEndOf="@+id/audio_icon"
+        android:layout_marginStart="10dp"
+        android:layout_centerVertical="true"
+        android:id="@+id/audio_title"/>
+
+    <TextView
+        android:id="@+id/audio_artist"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:layout_marginStart="10dp"
+        android:layout_toEndOf="@+id/audio_icon"
+        android:text="File artist"
+        android:layout_alignParentEnd="true"/>
+   <TextView
+       android:id="@+id/audio_duration"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:layout_marginTop="40dp"
+       android:layout_marginRight="10dp"
+       android:layout_alignParentEnd="true"
+       android:text="0:00"/>
+
+</RelativeLayout>
