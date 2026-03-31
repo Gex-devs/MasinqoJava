@@ -7,11 +7,16 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import java.io.IOException;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.bumptech.glide.Glide;
+
 import java.util.ArrayList;
+import java.util.Locale;
 
 public class SongAdapter extends RecyclerView.Adapter {
 
@@ -35,27 +40,28 @@ public class SongAdapter extends RecyclerView.Adapter {
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
 
+        int duration = Integer.parseInt(songs.get(position).getDuration());
         SongViewHolder songViewHolder = (SongViewHolder) holder;
         songViewHolder.songTitle.setText(songs.get(position).getTitle());
         songViewHolder.songArtist.setText(songs.get(position).getArtist());
-        songViewHolder.songDuration.setText(songs.get(position).getDuration());
+        songViewHolder.songDuration.setText(formatDuration(duration));
         byte[] image = getAlbumArt(songs.get(position).getPath());
-        if (image != null){
+        if (image != null) {
             Glide.with(context).asBitmap()
                     .load(image)
                     .into(songViewHolder.album_art);
-        }
-        else {
+        } else {
             Glide.with(context).asBitmap()
                     .load(R.drawable.ic_launcher_background)
                     .into(songViewHolder.album_art);
         }
     }
 
-    public void clear(){
+    public void clear() {
         songs.clear();
         notifyDataSetChanged();
     }
+
     @Override
     public int getItemCount() {
         return songs.size();
@@ -67,6 +73,7 @@ public class SongAdapter extends RecyclerView.Adapter {
         TextView songArtist;
         TextView songDuration;
         ImageView album_art;
+
         public SongViewHolder(@NonNull View itemView) {
             super(itemView);
             songTitle = itemView.findViewById(R.id.audio_title);
@@ -75,17 +82,24 @@ public class SongAdapter extends RecyclerView.Adapter {
             songDuration = itemView.findViewById(R.id.audio_duration);
         }
     }
-    private byte[] getAlbumArt(String uri){
+
+    private byte[] getAlbumArt(String uri) {
 
         MediaMetadataRetriever metadataRetriever = new MediaMetadataRetriever();
-            try {
+        try {
             metadataRetriever.setDataSource(uri);
             byte[] art = metadataRetriever.getEmbeddedPicture();
             metadataRetriever.release();
             return art;
-        }catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
             return null;
         }
+    }
+
+    private String formatDuration(int rawDuration) {
+        int seconds = (rawDuration / 1000) % 60;
+        int minutes = (rawDuration / (1000 * 60)) % 60;
+        return String.format(Locale.ROOT,"%d:%02d", minutes, seconds);
     }
 }

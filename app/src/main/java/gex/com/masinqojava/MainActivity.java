@@ -1,5 +1,7 @@
 package gex.com.masinqojava;
 
+import static com.google.common.reflect.Reflection.getPackageName;
+
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -23,8 +25,10 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import androidx.media3.exoplayer.ExoPlayer;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.viewpager2.widget.ViewPager2;
+
 
 import android.Manifest;
 
@@ -41,14 +45,21 @@ public class MainActivity extends AppCompatActivity {
     private static final String READ_STORAGE_PERMISSION = Manifest.permission.READ_MEDIA_AUDIO;
     static ArrayList<SongTemplate> songs;
     private ContentObserver contentObserver;
-    private SongAdapter songAdapter = new SongAdapter(songs, MainActivity.this);
-    SwipeRefreshLayout swipeRefreshLayout = findViewById(R.id.swipe_refresh);
+    private SongAdapter songAdapter;
+    private SwipeRefreshLayout swipeRefreshLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        swipeRefreshLayout = findViewById(R.id.swipe_refresh);
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            songAdapter.clear();
+            songs = getSongs(this);
+            initViewPager();
+            swipeRefreshLayout.setRefreshing(false);
+        });
         requestRuntimePermission();
         songAdapter = new SongAdapter(songs, this);
 
@@ -56,15 +67,13 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-
-
-    private void requestRuntimePermission(){
+    private void requestRuntimePermission() {
         if (ActivityCompat.checkSelfPermission(this, READ_STORAGE_PERMISSION) == PackageManager.PERMISSION_GRANTED) {
             songs = getSongs(MainActivity.this);
             initViewPager();
 
         } else if (ActivityCompat.shouldShowRequestPermissionRationale(this, READ_STORAGE_PERMISSION)) {
-            AlertDialog.Builder  builder = new AlertDialog.Builder(this);
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setMessage("This app requires storage permissions to function properly.")
                     .setTitle("Permission required")
                     .setCancelable(false)
@@ -75,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
                     .setNegativeButton("Deny", (((dialog, which) -> dialog.dismiss())));
             builder.show();
 
-        }else {
+        } else {
             ActivityCompat.requestPermissions(this, new String[]{READ_STORAGE_PERMISSION}, REQUEST_READ_STORAGE_PERMISSION);
         }
 
@@ -96,7 +105,9 @@ public class MainActivity extends AppCompatActivity {
 
     public static ArrayList<SongTemplate> tempAudioList = new ArrayList<>();
 
-    public static ArrayList<SongTemplate> getSongs(Context context){
+    public static ArrayList<SongTemplate> getSongs(Context context) {
+
+        tempAudioList.clear();
 
         Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
         String[] projectionDefinition = new String[]{
@@ -116,11 +127,13 @@ public class MainActivity extends AppCompatActivity {
                 String path = cursor.getString(4);
 
                 SongTemplate songTemplate = new SongTemplate(title, artist, path, album, duration);
-                Log.d("song list","path: " + path + " artist: " + artist);
+                Log.d("song list", "path: " + path + " artist: " + artist);
                 tempAudioList.add(songTemplate);
             }
             cursor.close();
         }
+
+        Log.d("MusicDebug", "Songs found: " + tempAudioList.size());
         return tempAudioList;
     }
 
@@ -131,11 +144,9 @@ public class MainActivity extends AppCompatActivity {
 
         if (requestCode == REQUEST_READ_STORAGE_PERMISSION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                songs = getSongs(this);
                 initViewPager();
-
-            }
-
-            else if (!ActivityCompat.shouldShowRequestPermissionRationale(this, READ_STORAGE_PERMISSION)) {
+            } else if (!ActivityCompat.shouldShowRequestPermissionRationale(this, READ_STORAGE_PERMISSION)) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(this);
                 builder.setMessage("This feature is unavailable because it requires permissions that have been denied")
                         .setTitle("Permission required")
@@ -153,9 +164,8 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
                 builder.show();
-            }
-            else {
-               requestRuntimePermission();
+            } else {
+                requestRuntimePermission();
             }
         }
     }
