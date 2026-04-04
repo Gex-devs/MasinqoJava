@@ -18,7 +18,8 @@ import androidx.media3.common.MediaItem
 
 class SongAdapter internal constructor(
     private val songs: ArrayList<MediaItem?>,
-    private val context: Context
+    private val context: Context,
+    private val onItemClick: (position: Int) -> Unit
 ) : RecyclerView.Adapter<SongAdapter.SongViewHolder>() {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SongViewHolder {
         val view =
@@ -46,9 +47,9 @@ class SongAdapter internal constructor(
             .error(R.drawable.ic_launcher_foreground)
             .centerCrop()
             .into(holder.albumArt)
-//        holder.itemView.setOnClickListener {
-//
-//        }
+        holder.itemView.setOnClickListener {
+            onItemClick(position)
+        }
     }
 
     fun clear() {

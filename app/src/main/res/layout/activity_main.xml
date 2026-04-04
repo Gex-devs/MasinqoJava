@@ -22,8 +22,18 @@
 
     <androidx.viewpager2.widget.ViewPager2
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:id="@+id/viewpager"/>
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/player_view"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        app:show_timeout="0"
+        />
+<!--        app:controller_layout_id=""-->
+
 
 
 </LinearLayout>

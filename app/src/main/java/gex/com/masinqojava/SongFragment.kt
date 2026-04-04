@@ -43,7 +43,9 @@ class SongFragment : Fragment() {
         }
         recyclerView!!.setHasFixedSize(true)
             if ((MainActivity.songs?.isNotEmpty() == true)) {
-                songAdapter = SongAdapter(MainActivity.songs!!, requireContext())
+                songAdapter = SongAdapter(MainActivity.songs!!, requireContext()){
+                    position -> (activity as? MainActivity)?.playSong(position)
+                }
                 recyclerView!!.setAdapter(songAdapter)
                 recyclerView!!.setLayoutManager(
                     LinearLayoutManager(

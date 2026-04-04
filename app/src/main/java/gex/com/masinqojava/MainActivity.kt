@@ -30,16 +30,32 @@ import com.google.android.material.tabs.TabLayoutMediator.TabConfigurationStrate
 class MainActivity : AppCompatActivity() {
 
     private var swipeRefreshLayout: SwipeRefreshLayout? = null
+    private var player: ExoPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        val player = ExoPlayer.Builder(this).build()
+        player = ExoPlayer.Builder(this).build()
+        val playerView = findViewById<androidx.media3.ui.PlayerView>(R.id.player_view)
+        playerView.player = player
 
         requestRuntimePermission()
 
     }
 
+    fun playSong(position: Int){
+        val playlist = songs?.filterNotNull() ?: return
+        player?.let{
+            it.setMediaItems(playlist, position, 0L)
+            it.prepare()
+            it.play()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        player?.release()
+    }
 
     private fun requestRuntimePermission() {
         if (ActivityCompat.checkSelfPermission(
@@ -158,8 +174,8 @@ class MainActivity : AppCompatActivity() {
                 MediaStore.Audio.Media.TITLE,
                 MediaStore.Audio.Media.ARTIST,
                 MediaStore.Audio.Media.DURATION,
-                MediaStore.Audio.Media.ALBUM,
                 MediaStore.Audio.Media.DATA,
+                MediaStore.Audio.Media.ALBUM,
                 MediaStore.Audio.Media.ALBUM_ID,
             )
 
