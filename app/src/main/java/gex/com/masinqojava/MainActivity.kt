@@ -6,17 +6,16 @@ import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.Image
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
+import android.view.View
 import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.SeekBar
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -24,7 +23,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.viewpager2.widget.ViewPager2
@@ -32,35 +30,40 @@ import com.bumptech.glide.Glide
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.android.material.tabs.TabLayoutMediator.TabConfigurationStrategy
-import org.w3c.dom.Text
 
 
 class MainActivity : AppCompatActivity() {
     private var player: ExoPlayer? = null
 
+    private lateinit var playerView: ConstraintLayout
+    private lateinit var btnPlayPause: ImageButton
+    private lateinit var progressBar: ProgressBar
+    private lateinit var songTitle: TextView
+    private lateinit var songArtist: TextView
+    private lateinit var artworkView: ImageView
+    val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    val updateProgressAction = object : Runnable {
+        override fun run() {
+            player?.let {
+                if (it.isPlaying) {
+                    progressBar.progress = it.currentPosition.toInt()
+
+                }
+                handler.postDelayed(this, 1000)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        playerView = findViewById(R.id.custom_playback)
+        btnPlayPause = findViewById(R.id.btn_play_pause)
+        progressBar = findViewById(R.id.progressBar)
+        songTitle = findViewById(R.id.player_title)
+        songArtist = findViewById(R.id.player_artist)
         player = ExoPlayer.Builder(this).build()
-
-        val playerView = findViewById<ConstraintLayout>(R.id.custom_playback)
-        val btnPlayPause = playerView.findViewById<ImageButton>(R.id.btn_play_pause)
-        val seekBar = findViewById<SeekBar>(R.id.seekbar)
-        val songTitle = findViewById<TextView>(R.id.player_title)
-        val songArtist = findViewById<TextView>(R.id.player_artist)
-        val handler = android.os.Handler(android.os.Looper.getMainLooper())
-        val updateProgressAction = object : Runnable {
-            override fun run() {
-                player?.let {
-                    if (it.isPlaying) {
-                        seekBar.progress = it.currentPosition.toInt()
-
-                    }
-                    handler.postDelayed(this, 1000)
-                }
-            }
-        }
 
         findViewById<ImageButton>(R.id.btn_previous).setOnClickListener {
             player?.seekToPreviousMediaItem()
@@ -68,16 +71,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_next).setOnClickListener {
             player?.seekToNextMediaItem()
         }
-        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) {
-                    player?.seekTo(progress.toLong())
-                }
-            }
-
-            override fun onStartTrackingTouch(sb: SeekBar?) {}
-            override fun onStopTrackingTouch(sb: SeekBar?) {}
-        })
 
         btnPlayPause.setOnClickListener {
             player?.let {
@@ -88,12 +81,16 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        findViewById<View>(R.id.meta_text).setOnClickListener {
+            val bottomSheet = PlayerBottomSheet(player!!)
+            bottomSheet.show(supportFragmentManager, "PlayerBottomSheet")
+        }
         player?.addListener(object : Player.Listener {
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
 
-                    seekBar.max = player?.duration?.toInt() ?: 0
+                    progressBar.max = player?.duration?.toInt() ?: 0
                     handler.post(updateProgressAction)
                 }
             }
@@ -112,17 +109,16 @@ class MainActivity : AppCompatActivity() {
                 songTitle.text = mediaMetadata.title ?: "Unknown Title"
                 songArtist.text = mediaMetadata.artist ?: "Unknown Artist"
 
-                val songArtwork = findViewById<com.google.android.material.imageview.ShapeableImageView>(R.id.art_work)
+                val songArtwork =
+                    findViewById<com.google.android.material.imageview.ShapeableImageView>(R.id.art_work)
+
                 Glide.with(this@MainActivity)
                     .load(mediaMetadata.artworkUri)
+                    .placeholder(R.drawable.default_thumbnail)
+                    .error(R.drawable.default_thumbnail)
                     .into(songArtwork)
-            }
 
-//            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-//
-//                val playerView = findViewById<androidx.media3.ui.PlayerView>(R.id.player_view)
-//                playerView.player = player
-//            }
+            }
 
         })
 
@@ -142,6 +138,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        handler.removeCallbacks(updateProgressAction)
         player?.release()
     }
 
@@ -191,7 +188,7 @@ class MainActivity : AppCompatActivity() {
     private fun initViewPager() {
         val viewPager = findViewById<ViewPager2>(R.id.viewpager)
         val tabLayout = findViewById<TabLayout>(R.id.initview)
-        val viewPagerAdapter = ViewPagerAdapter(getSupportFragmentManager(), lifecycle)
+        val viewPagerAdapter = ViewPagerAdapter(supportFragmentManager, lifecycle)
         viewPagerAdapter.addFragment(SongFragment(), "Songs")
         viewPagerAdapter.addFragment(AlbumFragment(), "Album")
         viewPager.setAdapter(viewPagerAdapter)
@@ -212,7 +209,7 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
         if (requestCode == REQUEST_READ_STORAGE_PERMISSION) {
-            if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 songs = getSongs(this)
                 initViewPager()
             } else if (!ActivityCompat.shouldShowRequestPermissionRationale(

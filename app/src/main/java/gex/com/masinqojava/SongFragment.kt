@@ -49,13 +49,13 @@ class SongFragment : Fragment() {
                 recyclerView!!.setAdapter(songAdapter)
                 recyclerView!!.setLayoutManager(
                     LinearLayoutManager(
-                        getContext(),
+                        context,
                         RecyclerView.VERTICAL,
                         false
                     )
                 )
             } else {
-                Toast.makeText(getContext(), "No songs found", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "No songs found", Toast.LENGTH_SHORT).show()
             }
         return view
     }

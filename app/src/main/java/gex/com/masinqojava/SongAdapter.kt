@@ -40,11 +40,11 @@ class SongAdapter internal constructor(
             .thumbnail(
                 Glide.with(context)
                     .asBitmap()
-                    .load(R.drawable.ic_launcher_background)
+                    .load(R.drawable.default_thumbnail)
                     .centerCrop()
             )
-            .placeholder(R.drawable.ic_launcher_background)
-            .error(R.drawable.ic_launcher_foreground)
+            .placeholder(R.drawable.default_thumbnail)
+            .error(R.drawable.default_thumbnail)
             .centerCrop()
             .into(holder.albumArt)
         holder.itemView.setOnClickListener {
@@ -52,10 +52,7 @@ class SongAdapter internal constructor(
         }
     }
 
-    fun clear() {
-        songs.clear()
-        notifyDataSetChanged()
-    }
+
 
     override fun getItemCount(): Int {
         return songs.size
