@@ -4,56 +4,37 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
-/**
- * A simple [Fragment] subclass.
- * Use the [AlbumFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class AlbumFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var mParam1: String? = null
-    private var mParam2: String? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (getArguments() != null) {
-            mParam1 = getArguments()!!.getString(ARG_PARAM1)
-            mParam2 = getArguments()!!.getString(ARG_PARAM2)
-        }
-    }
+    var recyclerView: RecyclerView? = null
+    var albumAdapter: AlbumAdapter? = null
+    var swipeRefreshLayout: SwipeRefreshLayout? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_album, container, false)
-    }
-
-    companion object {
-        // TODO: Rename parameter arguments, choose names that match
-        // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-        private const val ARG_PARAM1 = "param1"
-        private const val ARG_PARAM2 = "param2"
-
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         * 
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment AlbumFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        fun newInstance(param1: String?, param2: String?): AlbumFragment {
-            val fragment = AlbumFragment()
-            val args = Bundle()
-            args.putString(ARG_PARAM1, param1)
-            args.putString(ARG_PARAM2, param2)
-            fragment.setArguments(args)
-            return fragment
+        val view = inflater.inflate(R.layout.fragment_album, container, false)
+        recyclerView = view.findViewById(R.id.album_recycler)
+        recyclerView?.layoutManager = GridLayoutManager(context, 2)
+        swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_album)
+        recyclerView!!.setHasFixedSize(true)
+        if ((MainActivity.albums?.isNotEmpty() == true)) {
+            albumAdapter = AlbumAdapter(MainActivity.albums!!, requireContext()) { position ->
+                (activity as? MainActivity)?.playSong(position)
+            }
+            recyclerView!!.setAdapter(albumAdapter)
+        } else {
+            Toast.makeText(context, "No albums found!", Toast.LENGTH_SHORT).show()
         }
+        return view
     }
+
 }

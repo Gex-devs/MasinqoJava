@@ -53,16 +53,15 @@ class SongAdapter internal constructor(
     }
 
 
-
     override fun getItemCount(): Int {
         return songs.size
     }
 
     class SongViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        var songTitle: TextView = itemView.findViewById<TextView>(R.id.audio_title)
-        var songArtist: TextView = itemView.findViewById<TextView>(R.id.audio_artist)
-        var albumArt: ImageView = itemView.findViewById<ImageView>(R.id.audio_icon)
-        var songDuration: TextView = itemView.findViewById<TextView>(R.id.audio_duration)
+        var songTitle: TextView = itemView.findViewById(R.id.audio_title)
+        var songArtist: TextView = itemView.findViewById(R.id.audio_artist)
+        var albumArt: ImageView = itemView.findViewById(R.id.audio_icon)
+        var songDuration: TextView = itemView.findViewById(R.id.audio_duration)
     }
 
 

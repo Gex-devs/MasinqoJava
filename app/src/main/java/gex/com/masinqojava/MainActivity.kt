@@ -30,6 +30,7 @@ import com.bumptech.glide.Glide
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.android.material.tabs.TabLayoutMediator.TabConfigurationStrategy
+import gex.com.masinqojava.gex.com.masinqojava.MusicLoader
 
 
 class MainActivity : AppCompatActivity() {
@@ -81,7 +82,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        findViewById<View>(R.id.meta_text).setOnClickListener {
+        findViewById<View>(R.id.meta_info).setOnClickListener {
             val bottomSheet = PlayerBottomSheet(player!!)
             bottomSheet.show(supportFragmentManager, "PlayerBottomSheet")
         }
@@ -109,6 +110,9 @@ class MainActivity : AppCompatActivity() {
                 songTitle.text = mediaMetadata.title ?: "Unknown Title"
                 songArtist.text = mediaMetadata.artist ?: "Unknown Artist"
 
+                songTitle.isSelected = true
+                songArtist.isSelected = true
+
                 val songArtwork =
                     findViewById<com.google.android.material.imageview.ShapeableImageView>(R.id.art_work)
 
@@ -125,6 +129,7 @@ class MainActivity : AppCompatActivity() {
         requestRuntimePermission()
 
     }
+
 
     fun playSong(position: Int) {
         val playlist = songs?.filterNotNull() ?: return
@@ -148,7 +153,8 @@ class MainActivity : AppCompatActivity() {
                 READ_STORAGE_PERMISSION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            songs = getSongs(this@MainActivity)
+            songs = MusicLoader().getSongs(this)
+            albums = MusicLoader().getAlbums(this)
             initViewPager()
         } else if (ActivityCompat.shouldShowRequestPermissionRationale(
                 this,
@@ -178,7 +184,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf<String>(READ_STORAGE_PERMISSION),
+                arrayOf(READ_STORAGE_PERMISSION),
                 REQUEST_READ_STORAGE_PERMISSION
             )
         }
@@ -187,7 +193,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun initViewPager() {
         val viewPager = findViewById<ViewPager2>(R.id.viewpager)
-        val tabLayout = findViewById<TabLayout>(R.id.initview)
+        val tabLayout = findViewById<TabLayout>(R.id.initView)
         val viewPagerAdapter = ViewPagerAdapter(supportFragmentManager, lifecycle)
         viewPagerAdapter.addFragment(SongFragment(), "Songs")
         viewPagerAdapter.addFragment(AlbumFragment(), "Album")
@@ -210,7 +216,8 @@ class MainActivity : AppCompatActivity() {
 
         if (requestCode == REQUEST_READ_STORAGE_PERMISSION) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                songs = getSongs(this)
+                songs = MusicLoader().getSongs(this)
+                albums = MusicLoader().getAlbums(this)
                 initViewPager()
             } else if (!ActivityCompat.shouldShowRequestPermissionRationale(
                     this,
@@ -251,83 +258,7 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.READ_EXTERNAL_STORAGE
             }
         var songs: ArrayList<MediaItem?>? = null
+        var albums: ArrayList<MediaItem?>? = null
 
-        fun getSongs(context: Context): ArrayList<MediaItem?> {
-            val tempAudioList = ArrayList<MediaItem?>()
-            val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-            val projection = arrayOf(
-                MediaStore.Audio.Media.TITLE,
-                MediaStore.Audio.Media.ARTIST,
-                MediaStore.Audio.Media.DURATION,
-                MediaStore.Audio.Media.DATA,
-                MediaStore.Audio.Media.ALBUM,
-                MediaStore.Audio.Media.ALBUM_ID,
-            )
-
-            context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-                while (cursor.moveToNext()) {
-                    val title = cursor.getString(0)
-                    val artist = cursor.getString(1)
-                    val duration = cursor.getLong(2)
-                    val path = cursor.getString(3)
-                    val albumId = cursor.getLong(5)
-                    val artUri = ContentUris.withAppendedId(
-                        "content://media/external/audio/albumart".toUri(),
-                        albumId
-                    )
-
-                    val mediaItem = MediaItem.Builder()
-                        .setMediaId(path)
-                        .setUri(path)
-                        .setMediaMetadata(
-                            androidx.media3.common.MediaMetadata.Builder()
-                                .setTitle(title)
-                                .setArtist(artist)
-                                .setDurationMs(duration)
-                                .setArtworkUri(artUri)
-                                .build()
-                        )
-                        .build()
-                    tempAudioList.add(mediaItem)
-                    Log.d("De Song list", "path: $path artist: $artist")
-                }
-            }
-            return tempAudioList
-        }
-
-
-//        fun getSongs(context: Context): ArrayList<SongTemplate?> {
-//            tempAudioList.clear()
-//
-//            val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-//            val projectionDefinition: Array<String?> = arrayOf(
-//                MediaStore.Audio.Media.TITLE,
-//                MediaStore.Audio.Media.ARTIST,
-//                MediaStore.Audio.Media.DURATION,
-//                MediaStore.Audio.Media.ALBUM,
-//                MediaStore.Audio.Media.DATA,
-//                MediaStore.Audio.Media.ALBUM_ID
-//            )
-//            val cursor =
-//                context.getContentResolver().query(uri, projectionDefinition, null, null, null)
-//            if (cursor != null) {
-//                while (cursor.moveToNext()) {
-//                    val title = cursor.getString(0)
-//                    val artist = cursor.getString(1)
-//                    val duration = cursor.getString(2)
-//                    val album = cursor.getString(3)
-//                    val path = cursor.getString(4)
-//                    val albumId = cursor.getLong(5)
-//
-//                    val songTemplate = SongTemplate(title, artist, path, album, duration, albumId)
-//                    Log.d("song list", "path: " + path + " artist: " + artist)
-//                    tempAudioList.add(songTemplate)
-//                }
-//                cursor.close()
-//            }
-//
-//            Log.d("MusicDebug", "Songs found: " + tempAudioList.size)
-//            return tempAudioList
-//        }
     }
 }

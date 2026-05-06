@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import gex.com.masinqojava.gex.com.masinqojava.MusicLoader
 
 class SongFragment : Fragment() {
     var recyclerView: RecyclerView? = null
@@ -26,10 +27,10 @@ class SongFragment : Fragment() {
     ): View {
         // Inflate the layout for this fragment
         val view = inflater.inflate(R.layout.fragment_song, container, false)
-        recyclerView = view.findViewById<RecyclerView>(R.id.song_recycler)
-        swipeRefreshLayout = view.findViewById<SwipeRefreshLayout>(R.id.swipe_refresh)
+        recyclerView = view.findViewById(R.id.song_recycler)
+        swipeRefreshLayout = view.findViewById(R.id.swipe_refresh)
         swipeRefreshLayout?.setOnRefreshListener {
-            val newSongs = MainActivity.getSongs(requireContext())
+            val newSongs = MusicLoader().getSongs(requireContext())
             val oldSongs = MainActivity.songs ?: emptyList()
 
             val diffResult = DiffUtil.calculateDiff(SongDiffCallback(oldSongs, newSongs))

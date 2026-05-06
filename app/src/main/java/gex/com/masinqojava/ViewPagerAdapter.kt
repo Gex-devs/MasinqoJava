@@ -32,4 +32,5 @@ class ViewPagerAdapter(fragmentManager: FragmentManager, lifecycle: Lifecycle) :
     fun getTitle(position: Int): String? {
         return titles.get(position)
     }
+
 }
