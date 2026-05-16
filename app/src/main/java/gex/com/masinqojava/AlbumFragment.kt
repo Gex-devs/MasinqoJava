@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
@@ -21,16 +20,16 @@ class AlbumFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        val view = inflater.inflate(R.layout.fragment_album, container, false)
+        val view = inflater.inflate(R.layout.fragment_albums, container, false)
         recyclerView = view.findViewById(R.id.album_recycler)
         recyclerView?.layoutManager = GridLayoutManager(context, 2)
         swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_album)
-        recyclerView!!.setHasFixedSize(true)
+        recyclerView?.setHasFixedSize(true)
         if ((MainActivity.albums?.isNotEmpty() == true)) {
             albumAdapter = AlbumAdapter(MainActivity.albums!!, requireContext()) { position ->
-                (activity as? MainActivity)?.playSong(position)
+                (activity as? MainActivity)?.openAlbum(position)
             }
-            recyclerView!!.setAdapter(albumAdapter)
+            recyclerView?.setAdapter(albumAdapter)
         } else {
             Toast.makeText(context, "No albums found!", Toast.LENGTH_SHORT).show()
         }

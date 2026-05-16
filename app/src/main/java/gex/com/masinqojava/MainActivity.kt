@@ -30,12 +30,13 @@ import com.bumptech.glide.Glide
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.android.material.tabs.TabLayoutMediator.TabConfigurationStrategy
-import gex.com.masinqojava.gex.com.masinqojava.MusicLoader
+
 
 
 class MainActivity : AppCompatActivity() {
-    private var player: ExoPlayer? = null
+    public var player: ExoPlayer? = null
 
+    private lateinit var permissionManager: PermissionManager
     private lateinit var playerView: ConstraintLayout
     private lateinit var btnPlayPause: ImageButton
     private lateinit var progressBar: ProgressBar
@@ -126,10 +127,23 @@ class MainActivity : AppCompatActivity() {
 
         })
 
-        requestRuntimePermission()
+        permissionManager = PermissionManager(this) {
+            initViewPager()
+        }
+        permissionManager.requestRuntimePermission()
+
 
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String?>,
+        grantResults: IntArray,
+
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        permissionManager.handlePermissionResult(requestCode, grantResults)
+    }
 
     fun playSong(position: Int) {
         val playlist = songs?.filterNotNull() ?: return
@@ -138,7 +152,21 @@ class MainActivity : AppCompatActivity() {
             it.prepare()
             it.play()
         }
+    }
 
+    fun openAlbum(position: Int){
+        val selectedAlbum = albums?.get(position)
+        val albumId = selectedAlbum?.mediaId?.toLong()
+        val albumSongs = MusicLoader.getSongsByAlbum(this, albumId!!)
+
+        if (albumSongs.isNotEmpty()){
+            player?.let{
+                val playlist = albumSongs.filterNotNull()
+                it.setMediaItems(playlist, 0, 0L)
+                it.prepare()
+                it.play()
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -147,51 +175,8 @@ class MainActivity : AppCompatActivity() {
         player?.release()
     }
 
-    private fun requestRuntimePermission() {
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                READ_STORAGE_PERMISSION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            songs = MusicLoader().getSongs(this)
-            albums = MusicLoader().getAlbums(this)
-            initViewPager()
-        } else if (ActivityCompat.shouldShowRequestPermissionRationale(
-                this,
-                READ_STORAGE_PERMISSION
-            )
-        ) {
-            val builder = AlertDialog.Builder(this)
-            builder.setMessage("This app requires storage permissions to function properly.")
-                .setTitle("Permission required")
-                .setCancelable(false)
-                .setPositiveButton(
-                    "Allow",
-                    (DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int ->
-                        ActivityCompat.requestPermissions(
-                            this@MainActivity, arrayOf<String>(
-                                READ_STORAGE_PERMISSION
-                            ), REQUEST_READ_STORAGE_PERMISSION
-                        )
-                        dialog?.dismiss()
-                    })
-                )
-                .setNegativeButton(
-                    "Deny",
-                    ((DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int -> dialog!!.dismiss() }))
-                )
-            builder.show()
-        } else {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(READ_STORAGE_PERMISSION),
-                REQUEST_READ_STORAGE_PERMISSION
-            )
-        }
-    }
 
-
-    private fun initViewPager() {
+    fun initViewPager() {
         val viewPager = findViewById<ViewPager2>(R.id.viewpager)
         val tabLayout = findViewById<TabLayout>(R.id.initView)
         val viewPagerAdapter = ViewPagerAdapter(supportFragmentManager, lifecycle)
@@ -207,51 +192,10 @@ class MainActivity : AppCompatActivity() {
         ).attach()
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String?>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        if (requestCode == REQUEST_READ_STORAGE_PERMISSION) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                songs = MusicLoader().getSongs(this)
-                albums = MusicLoader().getAlbums(this)
-                initViewPager()
-            } else if (!ActivityCompat.shouldShowRequestPermissionRationale(
-                    this,
-                    READ_STORAGE_PERMISSION
-                )
-            ) {
-                val builder = AlertDialog.Builder(this)
-                builder.setMessage("This feature is unavailable because it requires permissions that have been denied")
-                    .setTitle("Permission required")
-                    .setCancelable(false)
-                    .setNegativeButton(
-                        "Cancel",
-                        (DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int -> dialog!!.dismiss() })
-                    )
-                    .setPositiveButton("Settings", object : DialogInterface.OnClickListener {
-                        override fun onClick(dialog: DialogInterface, which: Int) {
-                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                            val uri = Uri.fromParts("package", getPackageName(), null)
-                            intent.setData(uri)
-                            startActivity(intent)
-
-                            dialog.dismiss()
-                        }
-                    })
-                builder.show()
-            } else {
-                requestRuntimePermission()
-            }
-        }
-    }
 
     companion object {
-        private const val REQUEST_READ_STORAGE_PERMISSION = 100
-        private val READ_STORAGE_PERMISSION =
+        const val REQUEST_READ_STORAGE_PERMISSION = 100
+        val READ_STORAGE_PERMISSION =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 Manifest.permission.READ_MEDIA_AUDIO
             } else {

@@ -2,12 +2,14 @@ package gex.com.masinqojava
 
 import android.content.Context
 import android.media.browse.MediaBrowser
+import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.media3.common.MediaItem
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -25,11 +27,13 @@ class AlbumAdapter internal constructor(
     }
 
     override fun onBindViewHolder(holder: AlbumViewHolder, position: Int) {
-        val album = albums[position]?: return
+        val album = albums[position] ?: return
         val metadata = album.mediaMetadata
         holder.albumTitle.text = metadata.title
         holder.albumArtist.text = metadata.artist
-        holder.numberOfSongs.text = metadata.totalTrackCount as CharSequence?
+        holder.numberOfSongs.text =
+            (metadata.extras?.getInt("track_count") ?: 0).toString() + " Songs"
+
 
         Glide.with(context)
             .asBitmap()
@@ -44,6 +48,27 @@ class AlbumAdapter internal constructor(
             .error(R.drawable.album_temp)
             .centerInside()
             .into(holder.albumArt)
+        holder.itemView.setOnClickListener {
+            try {
+                val albumIdString = album.mediaId
+                val albumId = albumIdString.toLongOrNull() ?: -1L
+
+                val fragment = OpenedAlbumFragment().apply {
+                    arguments = Bundle().apply {
+                        putLong("ALBUM_ID", albumId)
+                    }
+                }
+
+                val activity = context as? AppCompatActivity
+                activity?.supportFragmentManager?.beginTransaction()
+                    ?.setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
+                    ?.replace(R.id.main_fragment_container, fragment)
+                    ?.addToBackStack(null)
+                    ?.commit()
+            } catch (e: Exception) {
+                Log.d("AlbumAdapter", "Click failed: ${e.message}")
+            }
+        }
     }
 
     override fun getItemCount(): Int {
