@@ -32,7 +32,6 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.google.android.material.tabs.TabLayoutMediator.TabConfigurationStrategy
 
 
-
 class MainActivity : AppCompatActivity() {
     public var player: ExoPlayer? = null
 
@@ -140,7 +139,7 @@ class MainActivity : AppCompatActivity() {
         permissions: Array<out String?>,
         grantResults: IntArray,
 
-    ) {
+        ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         permissionManager.handlePermissionResult(requestCode, grantResults)
     }
@@ -154,14 +153,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun openAlbum(position: Int){
+    fun openAlbum(position: Int) {
         val selectedAlbum = albums?.get(position)
         val albumId = selectedAlbum?.mediaId?.toLong()
         val albumSongs = MusicLoader.getSongsByAlbum(this, albumId!!)
 
-        if (albumSongs.isNotEmpty()){
-            player?.let{
+        if (albumSongs.isNotEmpty()) {
+            player?.let {
                 val playlist = albumSongs.filterNotNull()
+                it.setMediaItems(playlist, 0, 0L)
+                it.prepare()
+                it.play()
+            }
+        }
+    }
+
+    fun openArtist(position: Int){
+        val selectedArtist = artists?.get(position)
+        val artistId = selectedArtist?.mediaId?.toLong()
+        val artistSongs = MusicLoader.getSongsByArtist(this, artistId!!)
+
+        if (artistSongs.isNotEmpty()){
+            player?.let {
+                val playlist = artistSongs.filterNotNull()
                 it.setMediaItems(playlist, 0, 0L)
                 it.prepare()
                 it.play()
@@ -180,8 +194,9 @@ class MainActivity : AppCompatActivity() {
         val viewPager = findViewById<ViewPager2>(R.id.viewpager)
         val tabLayout = findViewById<TabLayout>(R.id.initView)
         val viewPagerAdapter = ViewPagerAdapter(supportFragmentManager, lifecycle)
+        viewPagerAdapter.addFragment(ArtistFragment(), "Artists")
+        viewPagerAdapter.addFragment(AlbumFragment(), "Albums")
         viewPagerAdapter.addFragment(SongFragment(), "Songs")
-        viewPagerAdapter.addFragment(AlbumFragment(), "Album")
         viewPager.setAdapter(viewPagerAdapter)
         TabLayoutMediator(
             tabLayout,
@@ -203,6 +218,7 @@ class MainActivity : AppCompatActivity() {
             }
         var songs: ArrayList<MediaItem?>? = null
         var albums: ArrayList<MediaItem?>? = null
+        var artists: ArrayList<MediaItem?>? = null
 
     }
 }

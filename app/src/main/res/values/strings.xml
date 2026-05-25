@@ -15,4 +15,14 @@
     <string name="queue_list">Queue list</string>
     <string name="album_name">Album name</string>
     <string name="album_size_default">N/A</string>
+    <string name="albums"># albums</string>
+    <string name="songs"># Songs</string>
+    <plurals name="track_count_labels">
+        <item quantity="one">%d Song</item>
+        <item quantity="other">%d Songs</item>
+    </plurals>
+    <plurals name="albums_count_labels">
+        <item quantity="one">%d Album</item>
+        <item quantity="other">%d Albums</item>
+    </plurals>
 </resources>

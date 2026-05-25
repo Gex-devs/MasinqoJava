@@ -13,7 +13,6 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 class AlbumFragment : Fragment() {
     var recyclerView: RecyclerView? = null
     var albumAdapter: AlbumAdapter? = null
-    var swipeRefreshLayout: SwipeRefreshLayout? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -23,7 +22,7 @@ class AlbumFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_albums, container, false)
         recyclerView = view.findViewById(R.id.album_recycler)
         recyclerView?.layoutManager = GridLayoutManager(context, 2)
-        swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_album)
+
         recyclerView?.setHasFixedSize(true)
         if ((MainActivity.albums?.isNotEmpty() == true)) {
             albumAdapter = AlbumAdapter(MainActivity.albums!!, requireContext()) { position ->

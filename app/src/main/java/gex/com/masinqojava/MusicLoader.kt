@@ -7,6 +7,7 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 
 object MusicLoader {
 
@@ -79,6 +80,88 @@ object MusicLoader {
         return resolver(context, uri, projection, selection, selectionArgs)
     }
 
+    fun getArtists(context: Context): ArrayList<MediaItem?> {
+        val tempArtistList = ArrayList<MediaItem?>()
+        val uri = MediaStore.Audio.Artists.EXTERNAL_CONTENT_URI
+        val trackUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val projection = arrayOf(
+            MediaStore.Audio.Artists.ARTIST,
+            MediaStore.Audio.Artists._ID,
+            MediaStore.Audio.Artists.NUMBER_OF_ALBUMS,
+            MediaStore.Audio.Artists.NUMBER_OF_TRACKS,
+        )
+        val sortOrder = "${MediaStore.Audio.Artists.ARTIST} COLLATE NOCASE ASC"
+
+        context.contentResolver.query(uri, projection, null, null, sortOrder)?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val artistName = cursor.getString(0) ?: "Unknown artist"
+                val artistId = cursor.getLong(1)
+                val numberOfAlbums = cursor.getInt(2)
+                val numberOfSongs = cursor.getInt(3)
+
+
+                val trackProjection = arrayOf(MediaStore.Audio.Media.ALBUM_ID)
+
+                val trackSelection = "${MediaStore.Audio.Media.ARTIST_ID} = ?"
+                val trackSelectionArgs = arrayOf(artistId.toString())
+
+                var representativeAlbumId: Long = -1
+
+                context.contentResolver.query(
+                    trackUri,
+                    trackProjection,
+                    trackSelection,
+                    trackSelectionArgs,
+                    "${MediaStore.Audio.Media.DATE_ADDED} DESC"
+                )?.use { trackCursor ->
+                    if (trackCursor.moveToFirst()) {
+                        representativeAlbumId = trackCursor.getLong(0)
+                    }
+                }
+                val artUri = if (representativeAlbumId != -1L) {
+                    ContentUris.withAppendedId(
+                        "content://media/external/audio/albumart".toUri(),
+                        representativeAlbumId
+                    )
+                } else {
+                    null
+                }
+
+                val mediaItem = MediaItem.Builder()
+                    .setMediaId(artistId.toString())
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setArtist(artistName)
+                            .setArtworkUri(artUri)
+                            .setExtras(android.os.Bundle().apply {
+                                putInt("album_count", numberOfAlbums)
+                                putInt("track_count", numberOfSongs)
+                            })
+                            .build()
+                    )
+                    .build()
+                tempArtistList.add(mediaItem)
+                Log.d("De Artist list", "Artist name: $artistName")
+            }
+        }
+        return tempArtistList
+    }
+
+    fun getSongsByArtist(context: Context, artistId: Long): ArrayList<MediaItem?> {
+        val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val selection = "${MediaStore.Audio.Media.ARTIST_ID} = ?"
+        val selectionArgs = arrayOf(artistId.toString())
+
+        val projection = arrayOf(
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.DATA,
+            MediaStore.Audio.Media.ALBUM_ID
+        )
+        return resolver(context, uri, projection, selection, selectionArgs)
+    }
+
     fun resolver(
         context: Context,
         uri: Uri,
@@ -114,7 +197,7 @@ object MusicLoader {
                         .setMediaId(path)
                         .setUri(path)
                         .setMediaMetadata(
-                            androidx.media3.common.MediaMetadata.Builder()
+                            MediaMetadata.Builder()
                                 .setTitle(title)
                                 .setArtist(artist)
                                 .setDurationMs(duration)

@@ -25,7 +25,7 @@ class ViewPagerAdapter(fragmentManager: FragmentManager, lifecycle: Lifecycle) :
     }
 
     override fun createFragment(position: Int): Fragment {
-        return fragments.get(position)
+        return fragments[position]
     }
 
     override fun getItemCount(): Int {
@@ -33,7 +33,7 @@ class ViewPagerAdapter(fragmentManager: FragmentManager, lifecycle: Lifecycle) :
     }
 
     fun getTitle(position: Int): String? {
-        return titles.get(position)
+        return titles[position]
     }
 
 }
