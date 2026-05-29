@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import gex.com.masinqojava.MainActivity
 import gex.com.masinqojava.MusicLoader
@@ -30,9 +31,13 @@ class OpenedArtistFragment : Fragment() {
         val songs = MusicLoader.getSongsByArtist(requireContext(), artistId)
         val adapter = SongAdapter(songs, requireContext()) { position ->
             (activity as? MainActivity)?.let { main ->
-                main.player?.setMediaItems(songs.filterNotNull(), position, 0L)
-                main.player?.prepare()
-                main.player?.play()
+                main.controller?.let { playerController ->
+                    playerController.setMediaItems(songs.filterNotNull(), position, 0L)
+                    playerController.prepare()
+                    playerController.play()
+                } ?: run {
+                    Toast.makeText(requireContext(), "Player not ready", Toast.LENGTH_SHORT).show()
+                }
             }
         }
         binding.openedArtistRecycler.adapter = adapter

@@ -46,6 +46,7 @@ dependencies {
     implementation libs.swiperefreshlayout
     implementation libs.media3.exoplayer
     implementation libs.core.ktx
+    implementation libs.media3.session
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core

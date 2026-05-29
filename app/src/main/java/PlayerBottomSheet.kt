@@ -21,7 +21,7 @@ import gex.com.masinqojava.R
 import gex.com.masinqojava.databinding.ExpandedPlaybackControlsBinding
 import androidx.core.view.isGone
 
-class PlayerBottomSheet(private val player: ExoPlayer) : BottomSheetDialogFragment() {
+class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment() {
     private var _binding: ExpandedPlaybackControlsBinding? = null
 
     private val binding get() = _binding!!
