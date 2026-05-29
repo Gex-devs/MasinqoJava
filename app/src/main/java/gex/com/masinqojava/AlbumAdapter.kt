@@ -28,10 +28,11 @@ class AlbumAdapter internal constructor(
     override fun onBindViewHolder(holder: AlbumViewHolder, position: Int) {
         val album = albums[position] ?: return
         val metadata = album.mediaMetadata
-        val count = metadata.extras?.getInt("track_count")?:0
+        val count = metadata.extras?.getInt("track_count") ?: 0
         holder.albumTitle.text = metadata.title
         holder.albumArtist.text = metadata.artist
-        holder.numberOfSongs.text = context.resources.getQuantityString(R.plurals.track_count_labels, count, count)
+        holder.numberOfSongs.text =
+            context.resources.getQuantityString(R.plurals.track_count_labels, count, count)
 
         Glide.with(context)
             .asBitmap()

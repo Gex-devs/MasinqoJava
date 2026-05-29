@@ -168,12 +168,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun openArtist(position: Int){
+    fun openGenre(position: Int){
+        val selectedGenre = genres?.get(position)
+        val genreId = selectedGenre?.mediaId?.toLong()
+        val genreSongs = MusicLoader.getSongsByGenre(this, genreId!!)
+
+        if (genreSongs.isNotEmpty()){
+            player?.let{
+                val playlist = genreSongs.filterNotNull()
+                it.setMediaItems(playlist, 0, 0L)
+                it.prepare()
+                it.play()
+            }
+        }
+    }
+
+    fun openArtist(position: Int) {
         val selectedArtist = artists?.get(position)
         val artistId = selectedArtist?.mediaId?.toLong()
         val artistSongs = MusicLoader.getSongsByArtist(this, artistId!!)
 
-        if (artistSongs.isNotEmpty()){
+        if (artistSongs.isNotEmpty()) {
             player?.let {
                 val playlist = artistSongs.filterNotNull()
                 it.setMediaItems(playlist, 0, 0L)
@@ -194,6 +209,7 @@ class MainActivity : AppCompatActivity() {
         val viewPager = findViewById<ViewPager2>(R.id.viewpager)
         val tabLayout = findViewById<TabLayout>(R.id.initView)
         val viewPagerAdapter = ViewPagerAdapter(supportFragmentManager, lifecycle)
+        viewPagerAdapter.addFragment(GenreFragment(), "Genres")
         viewPagerAdapter.addFragment(ArtistFragment(), "Artists")
         viewPagerAdapter.addFragment(AlbumFragment(), "Albums")
         viewPagerAdapter.addFragment(SongFragment(), "Songs")
@@ -219,6 +235,7 @@ class MainActivity : AppCompatActivity() {
         var songs: ArrayList<MediaItem?>? = null
         var albums: ArrayList<MediaItem?>? = null
         var artists: ArrayList<MediaItem?>? = null
+        var genres: ArrayList<MediaItem?>? = null
 
     }
 }

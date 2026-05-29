@@ -17,6 +17,8 @@
     <string name="album_size_default">N/A</string>
     <string name="albums"># albums</string>
     <string name="songs"># Songs</string>
+    <string name="genres">genres</string>
+    <string name="genre">Genre</string>
     <plurals name="track_count_labels">
         <item quantity="one">%d Song</item>
         <item quantity="other">%d Songs</item>

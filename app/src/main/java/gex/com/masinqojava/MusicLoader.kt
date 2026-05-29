@@ -147,6 +147,48 @@ object MusicLoader {
         return tempArtistList
     }
 
+    fun getGenres(context: Context): ArrayList<MediaItem?> {
+        val tempGenreList = ArrayList<MediaItem?>()
+        val uri = MediaStore.Audio.Genres.EXTERNAL_CONTENT_URI
+        val projection = arrayOf(
+            MediaStore.Audio.Genres.NAME,
+            MediaStore.Audio.Genres._ID,
+        )
+
+        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+            val genreIdIdx = cursor.getColumnIndexOrThrow(MediaStore.Audio.Genres._ID)
+            val genreNameIdx = cursor.getColumnIndexOrThrow(MediaStore.Audio.Genres.NAME)
+            while (cursor.moveToNext()) {
+                val genreId = cursor.getLong(genreIdIdx)
+                val genreName = cursor.getString(genreNameIdx)
+                val mediaItem = MediaItem.Builder()
+                    .setMediaId(genreId.toString())
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(genreName)
+                            .build()
+                    )
+                    .build()
+                tempGenreList.add(mediaItem)
+                Log.d("De Genre list", "Genre name: $genreName")
+            }
+        }
+        return tempGenreList
+    }
+
+    fun getSongsByGenre(context: Context, genreId: Long): ArrayList<MediaItem?> {
+        val uri = MediaStore.Audio.Genres.Members.getContentUri("external", genreId)
+        val projection = arrayOf(
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.DATA,
+            MediaStore.Audio.Media.ALBUM_ID
+        )
+        return resolver(context, uri, projection, null, null)
+
+    }
+
     fun getSongsByArtist(context: Context, artistId: Long): ArrayList<MediaItem?> {
         val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         val selection = "${MediaStore.Audio.Media.ARTIST_ID} = ?"

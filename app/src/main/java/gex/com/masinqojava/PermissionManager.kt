@@ -13,11 +13,11 @@ import gex.com.masinqojava.MainActivity.Companion.READ_STORAGE_PERMISSION
 import gex.com.masinqojava.MainActivity.Companion.REQUEST_READ_STORAGE_PERMISSION
 import gex.com.masinqojava.MainActivity.Companion.albums
 import gex.com.masinqojava.MainActivity.Companion.artists
+import gex.com.masinqojava.MainActivity.Companion.genres
 import gex.com.masinqojava.MainActivity.Companion.songs
 import gex.com.masinqojava.ViewPagerAdapter
 
 class PermissionManager(private val activity: MainActivity, private val onSuccess: () -> Unit) {
-
 
     fun requestRuntimePermission() {
 
@@ -28,6 +28,7 @@ class PermissionManager(private val activity: MainActivity, private val onSucces
             songs = MusicLoader.getSongs(activity)
             albums = MusicLoader.getAlbums(activity)
             artists = MusicLoader.getArtists(activity)
+            genres = MusicLoader.getGenres(activity)
             onSuccess()
         } else {
             ActivityCompat.requestPermissions(
@@ -42,6 +43,7 @@ class PermissionManager(private val activity: MainActivity, private val onSucces
                 songs = MusicLoader.getSongs(activity)
                 albums = MusicLoader.getAlbums(activity)
                 artists = MusicLoader.getArtists(activity)
+                genres = MusicLoader.getGenres(activity)
                 onSuccess()
             } else if (!ActivityCompat.shouldShowRequestPermissionRationale(
                     activity, READ_STORAGE_PERMISSION
