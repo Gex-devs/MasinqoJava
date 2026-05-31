@@ -11,13 +11,8 @@ import com.google.android.material.tabs.TabLayoutMediator
 
 class ViewPagerAdapter(fragmentManager: FragmentManager, lifecycle: Lifecycle) :
     FragmentStateAdapter(fragmentManager, lifecycle) {
-    private val fragments: ArrayList<Fragment>
-    private val titles: ArrayList<String?>
-
-    init {
-        this.fragments = ArrayList<Fragment>()
-        this.titles = ArrayList<String?>()
-    }
+    private val fragments: ArrayList<Fragment> = ArrayList<Fragment>()
+    private val titles: ArrayList<String?> = ArrayList<String?>()
 
     fun addFragment(fragment: Fragment?, title: String?) {
         fragments.add(fragment!!)

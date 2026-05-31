@@ -7,6 +7,8 @@ import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Filter
+import android.widget.Filterable
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
@@ -20,7 +22,10 @@ class SongAdapter internal constructor(
     private val songs: ArrayList<MediaItem?>,
     private val context: Context,
     private val onItemClick: (position: Int) -> Unit
-) : RecyclerView.Adapter<SongAdapter.SongViewHolder>() {
+) : RecyclerView.Adapter<SongAdapter.SongViewHolder>(), Filterable {
+
+    private var songsFull: List<MediaItem?> = ArrayList(songs)
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SongViewHolder {
         val view =
             LayoutInflater.from(context).inflate(R.layout.audio_items_template, parent, false)
@@ -28,24 +33,15 @@ class SongAdapter internal constructor(
     }
 
     override fun onBindViewHolder(holder: SongViewHolder, position: Int) {
-        val song = songs[position]?: return
+        val song = songs[position] ?: return
         val metadata = song.mediaMetadata
         holder.songTitle.text = metadata.title
         holder.songArtist.text = metadata.artist
         holder.songDuration.text = formatDuration(metadata.durationMs?.toInt())
 
-        Glide.with(context)
-            .asBitmap()
-            .load(metadata.artworkUri)
-            .thumbnail(
-                Glide.with(context)
-                    .asBitmap()
-                    .load(R.drawable.default_thumbnail)
-                    .centerCrop()
-            )
-            .placeholder(R.drawable.default_thumbnail)
-            .error(R.drawable.default_thumbnail)
-            .centerCrop()
+        Glide.with(context).asBitmap().load(metadata.artworkUri).thumbnail(
+            Glide.with(context).asBitmap().load(R.drawable.default_thumbnail).centerCrop()
+        ).placeholder(R.drawable.default_thumbnail).error(R.drawable.default_thumbnail).centerCrop()
             .into(holder.albumArt)
         holder.itemView.setOnClickListener {
             onItemClick(position)
@@ -69,5 +65,36 @@ class SongAdapter internal constructor(
         val seconds = (rawDuration?.div(1000))?.rem(60)
         val minutes = (rawDuration?.div((1000 * 60)))?.rem(60)
         return String.format(Locale.ROOT, "%d:%02d", minutes, seconds)
+    }
+
+    override fun getFilter(): Filter? {
+        return object : Filter() {
+            override fun performFiltering(constraint: CharSequence?): FilterResults {
+                val filterPattern = constraint.toString().trim().lowercase(Locale.ROOT) ?: ""
+
+                val filteredList = if (filterPattern.isEmpty()) {
+                    songsFull
+                } else {
+                    songsFull.filter { item ->
+                        val metadata = item?.mediaMetadata
+                        metadata?.title?.toString()?.lowercase(Locale.ROOT)
+                            ?.contains(filterPattern) == true || metadata?.artist?.toString()
+                            ?.lowercase(Locale.ROOT)?.contains(filterPattern) == true
+                    }
+                }
+                return FilterResults().apply { values = filteredList }
+            }
+
+
+            override fun publishResults(
+                constraint: CharSequence?, results: FilterResults?
+            ) {
+                songs.clear()
+                if (results?.values != null){
+                    songs.addAll(results.values as List<MediaItem?>)
+                }
+                notifyDataSetChanged()
+            }
+        }
     }
 }

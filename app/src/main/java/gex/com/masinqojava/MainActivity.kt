@@ -15,7 +15,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.SessionToken
 import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
@@ -28,7 +27,6 @@ import kotlin.jvm.java
 
 
 class MainActivity : AppCompatActivity() {
-//    public var player: ExoPlayer? = null
 
     private lateinit var permissionManager: PermissionManager
     private lateinit var playerView: ConstraintLayout
@@ -37,6 +35,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var songTitle: TextView
     private lateinit var songArtist: TextView
     private lateinit var artworkView: ImageView
+    private lateinit var searchView: androidx.appcompat.widget.SearchView
     private var controllerFuture: ListenableFuture<MediaController>? = null
     val controller: MediaController?
         get() = if (controllerFuture?.isDone == true) controllerFuture?.get() else null
@@ -67,20 +66,20 @@ class MainActivity : AppCompatActivity() {
         MediaController.releaseFuture(controllerFuture!!)
     }
 
-    private fun setupUIWithPlayer(connectPlayer: Player?){
+    private fun setupUIWithPlayer(connectPlayer: Player?) {
         if (connectPlayer == null) return
 
-        connectPlayer.addListener(object : Player.Listener{
+        connectPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 btnPlayPause.setImageResource(
-                    if (isPlaying)R.drawable.pause_with_circle
+                    if (isPlaying) R.drawable.pause_with_circle
                     else R.drawable.play_with_circle
                 )
             }
 
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-                songTitle.text = mediaMetadata.title?: "Unknown Title"
-                songArtist.text = mediaMetadata.artist?: "Unknown Artist"
+                songTitle.text = mediaMetadata.title ?: "Unknown Title"
+                songArtist.text = mediaMetadata.artist ?: "Unknown Artist"
             }
         })
     }
@@ -94,6 +93,7 @@ class MainActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.progressBar)
         songTitle = findViewById(R.id.player_title)
         songArtist = findViewById(R.id.player_artist)
+        searchView = findViewById(R.id.search_view)
 
         findViewById<ImageButton>(R.id.btn_previous).setOnClickListener {
             controller?.seekToPreviousMediaItem()
@@ -101,6 +101,26 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_next).setOnClickListener {
             controller?.seekToNextMediaItem()
         }
+
+        searchView.setOnQueryTextListener(object :
+            androidx.appcompat.widget.SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                val query = newText ?: ""
+
+                val fragments = supportFragmentManager.fragments
+                for (fragment in fragments) {
+
+                    if (fragment is SongFragment){
+                        fragment.filter(query)
+                    }
+                }
+                return true
+            }
+        })
 
         btnPlayPause.setOnClickListener {
             controller?.let {
@@ -153,11 +173,12 @@ class MainActivity : AppCompatActivity() {
 
         })
 
+
+
         permissionManager = PermissionManager(this) {
             initViewPager()
         }
         permissionManager.requestRuntimePermission()
-
 
     }
 
@@ -236,14 +257,14 @@ class MainActivity : AppCompatActivity() {
         val viewPager = findViewById<ViewPager2>(R.id.viewpager)
         val tabLayout = findViewById<TabLayout>(R.id.initView)
         val viewPagerAdapter = ViewPagerAdapter(supportFragmentManager, lifecycle)
-        viewPagerAdapter.addFragment(GenreFragment(), "Genres")
+        viewPagerAdapter.addFragment(SongFragment(), "Songs")
         viewPagerAdapter.addFragment(ArtistFragment(), "Artists")
         viewPagerAdapter.addFragment(AlbumFragment(), "Albums")
-        viewPagerAdapter.addFragment(SongFragment(), "Songs")
+        viewPagerAdapter.addFragment(GenreFragment(), "Genres")
         viewPager.setAdapter(viewPagerAdapter)
         TabLayoutMediator(
             tabLayout, viewPager, (TabConfigurationStrategy { tab: TabLayout.Tab?, position: Int ->
-                tab!!.setText(viewPagerAdapter.getTitle(position))
+                tab!!.text = viewPagerAdapter.getTitle(position)
             })
         ).attach()
     }
