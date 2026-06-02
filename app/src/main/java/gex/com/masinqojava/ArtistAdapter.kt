@@ -7,6 +7,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewParent
+import android.widget.Filter
+import android.widget.Filterable
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -16,12 +18,15 @@ import com.bumptech.glide.Glide
 import gex.com.masinqojava.R
 import gex.com.masinqojava.gex.com.masinqojava.OpenedArtistFragment
 import org.w3c.dom.Text
+import java.util.Locale
 
 class ArtistAdapter internal constructor(
     private val artists: ArrayList<MediaItem?>,
     private val context: Context,
     private val onItemClick: (position: Int) -> Unit
-    ) : RecyclerView.Adapter<ArtistAdapter.ArtistViewHolder>() {
+) : RecyclerView.Adapter<ArtistAdapter.ArtistViewHolder>(), Filterable {
+
+    private var artistsFull: List<MediaItem?> = ArrayList(artists)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ArtistViewHolder {
         val view =
@@ -75,10 +80,10 @@ class ArtistAdapter internal constructor(
                     ?.replace(R.id.main_fragment_container, fragment)
                     ?.addToBackStack(null)
                     ?.commit()
-            }catch (e: Exception){
+            } catch (e: Exception) {
                 Log.d("ArtistAdapter", "Click failed: ${e.message}")
             }
-        Log.d("ArtistAdapter", "Artist: ${metadata.artist}, Uri: ${metadata.artworkUri}")
+            Log.d("ArtistAdapter", "Artist: ${metadata.artist}, Uri: ${metadata.artworkUri}")
         }
     }
 
@@ -87,9 +92,35 @@ class ArtistAdapter internal constructor(
         return artistSize
     }
 
+    override fun getFilter(): Filter? {
+        return object : Filter() {
+            override fun performFiltering(constraint: CharSequence?): FilterResults? {
+                val filterPattern = constraint.toString().trim().lowercase(Locale.ROOT) ?: ""
+                val filteredList = if (filterPattern.isEmpty()) {
+                    artistsFull
+                }else{
+                    artistsFull.filter { item ->
+                        val metadata = item?.mediaMetadata
+                        metadata?.artist?.toString()?.lowercase(Locale.ROOT)
+                            ?.contains(filterPattern) == true || metadata?.title?.toString()?.lowercase(
+                            Locale.ROOT)?.contains(filterPattern) == true
+                    }
+                }
+                return FilterResults().apply { values = filteredList }
+            }
+
+            override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                artists.clear()
+                if (results?.values != null){
+                    artists.addAll(results.values as List<MediaItem?>)
+                }
+                notifyDataSetChanged()
+            }
+        }
+    }
+
     class ArtistViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         var albumTitle: TextView = itemView.findViewById(R.id.artist_name)
-//        val albumArtist: TextView = itemView.findViewById(R.id.album_artist)
         val albumArt: ImageView = itemView.findViewById(R.id.album_art)
         val numberOfAlbums: TextView = itemView.findViewById(R.id.number_of_albums)
         val numberOfSongs: TextView = itemView.findViewById(R.id.number_of_songs)

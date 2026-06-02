@@ -26,7 +26,9 @@
         android:layout_height="wrap_content"
         android:background="@color/black"
         android:iconifiedByDefault="false"
+        android:layoutDirection="rtl"
         app:queryHint="Search songs, artists..." />
+
 
     <FrameLayout
         android:id="@+id/main_fragment_container"
@@ -105,17 +107,19 @@
                     android:text="@string/song_title"
                     android:textColor="@color/white"
                     android:textStyle="bold"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
                     android:id="@+id/player_artist"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:text="@string/artist_name"
                     android:textColor="@color/off_white"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@+id/player_title" />
             </androidx.constraintlayout.widget.ConstraintLayout>
@@ -162,18 +166,6 @@
 
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-
-    <!-- Just in case I mess up the custom implementation-->
-    <!--    <androidx.media3.ui.PlayerView-->
-    <!--        android:id="@+id/player_view"-->
-    <!--        android:layout_width="match_parent"-->
-    <!--        android:layout_height="80dp"-->
-    <!--        app:show_timeout="999999999"-->
-    <!--        app:use_controller="true"-->
-    <!--        app:controller_layout_id="@layout/playback_controls"-->
-    <!--        app:use_artwork="true"-->
-    <!--        />-->
 
 
 </LinearLayout>

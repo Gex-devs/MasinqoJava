@@ -40,4 +40,8 @@ class ArtistFragment : Fragment() {
         return view
     }
 
+    fun filterArtist(query: String) {
+        artistAdapter?.filter?.filter(query)
+    }
 }
+

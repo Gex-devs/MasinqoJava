@@ -18,6 +18,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.SessionToken
 import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
+import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.android.material.tabs.TabLayoutMediator.TabConfigurationStrategy
@@ -34,7 +35,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var songTitle: TextView
     private lateinit var songArtist: TextView
-    private lateinit var artworkView: ImageView
+    private lateinit var songArtwork: ShapeableImageView
     private lateinit var searchView: androidx.appcompat.widget.SearchView
     private var controllerFuture: ListenableFuture<MediaController>? = null
     val controller: MediaController?
@@ -75,11 +76,29 @@ class MainActivity : AppCompatActivity() {
                     if (isPlaying) R.drawable.pause_with_circle
                     else R.drawable.play_with_circle
                 )
+                if (isPlaying) handler.post(updateProgressAction)
+                else handler.removeCallbacks(updateProgressAction)
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) {
+                    progressBar.max = controller?.duration?.toInt() ?: 0
+                    handler.post(updateProgressAction)
+                }
             }
 
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
                 songTitle.text = mediaMetadata.title ?: "Unknown Title"
                 songArtist.text = mediaMetadata.artist ?: "Unknown Artist"
+
+                songTitle.isSelected = true
+                songArtist.isSelected = true
+
+                Glide.with(this@MainActivity)
+                    .load(mediaMetadata.artworkUri)
+                    .placeholder(R.drawable.default_thumbnail)
+                    .error(R.drawable.artists_temp)
+                    .into(songArtwork)
             }
         })
     }
@@ -94,6 +113,7 @@ class MainActivity : AppCompatActivity() {
         songTitle = findViewById(R.id.player_title)
         songArtist = findViewById(R.id.player_artist)
         searchView = findViewById(R.id.search_view)
+        songArtwork = findViewById(R.id.art_work)
 
         findViewById<ImageButton>(R.id.btn_previous).setOnClickListener {
             controller?.seekToPreviousMediaItem()
@@ -114,8 +134,11 @@ class MainActivity : AppCompatActivity() {
                 val fragments = supportFragmentManager.fragments
                 for (fragment in fragments) {
 
-                    if (fragment is SongFragment){
-                        fragment.filter(query)
+                    when(fragment){
+                        is SongFragment -> fragment.filterSongs(query)
+                        is ArtistFragment -> fragment.filterArtist(query)
+                        is AlbumFragment -> fragment.filterAlbums(query)
+                        is GenreFragment -> fragment.filterGenre(query)
                     }
                 }
                 return true
@@ -135,45 +158,6 @@ class MainActivity : AppCompatActivity() {
             val bottomSheet = PlayerBottomSheet(controller!!)
             bottomSheet.show(supportFragmentManager, "PlayerBottomSheet")
         }
-        controller?.addListener(object : Player.Listener {
-
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY) {
-
-                    progressBar.max = controller?.duration?.toInt() ?: 0
-                    handler.post(updateProgressAction)
-                }
-            }
-
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                if (isPlaying) {
-                    btnPlayPause.setImageResource(R.drawable.pause_with_circle)
-                    handler.post(updateProgressAction)
-                } else {
-                    btnPlayPause.setImageResource(R.drawable.play_with_circle)
-                    handler.removeCallbacks(updateProgressAction)
-                }
-            }
-
-            override fun onMediaMetadataChanged(mediaMetadata: androidx.media3.common.MediaMetadata) {
-                songTitle.text = mediaMetadata.title ?: "Unknown Title"
-                songArtist.text = mediaMetadata.artist ?: "Unknown Artist"
-
-                songTitle.isSelected = true
-                songArtist.isSelected = true
-
-                val songArtwork =
-                    findViewById<com.google.android.material.imageview.ShapeableImageView>(R.id.art_work)
-
-                Glide.with(this@MainActivity).load(mediaMetadata.artworkUri)
-                    .placeholder(R.drawable.default_thumbnail).error(R.drawable.default_thumbnail)
-                    .into(songArtwork)
-
-            }
-
-        })
-
-
 
         permissionManager = PermissionManager(this) {
             initViewPager()

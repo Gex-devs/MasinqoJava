@@ -64,7 +64,8 @@ class SongFragment : Fragment() {
         return view
     }
 
-    fun filter(query: String) {
+
+    fun filterSongs(query: String) {
         songAdapter?.filter?.filter(query)
     }
 

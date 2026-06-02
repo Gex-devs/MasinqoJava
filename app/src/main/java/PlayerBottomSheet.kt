@@ -99,14 +99,14 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         _binding = ExpandedPlaybackControlsBinding.inflate(inflater, container, false)
 
         binding.btnPrevious.setOnClickListener {
-            player?.seekToPreviousMediaItem()
+            player.seekToPreviousMediaItem()
         }
         binding.btnNext.setOnClickListener {
-            player?.seekToNextMediaItem()
+            player.seekToNextMediaItem()
         }
 
 
@@ -119,7 +119,7 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
                     fromUser: Boolean
                 ) {
                     if (fromUser) {
-                        player?.seekTo(progress.toLong())
+                        player.seekTo(progress.toLong())
                     }
                 }
 
@@ -133,7 +133,7 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
             })
 
         binding.btnPlayPause.setOnClickListener {
-            player?.let {
+            player.let {
                 if (it.isPlaying) {
                     it.pause()
                 } else {

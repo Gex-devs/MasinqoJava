@@ -35,4 +35,7 @@ class AlbumFragment : Fragment() {
         return view
     }
 
+    fun filterAlbums(query: String) {
+        albumAdapter?.filter?.filter(query)
+    }
 }

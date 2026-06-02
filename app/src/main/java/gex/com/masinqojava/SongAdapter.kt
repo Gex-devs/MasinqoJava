@@ -67,7 +67,7 @@ class SongAdapter internal constructor(
         return String.format(Locale.ROOT, "%d:%02d", minutes, seconds)
     }
 
-    override fun getFilter(): Filter? {
+    override fun getFilter(): Filter {
         return object : Filter() {
             override fun performFiltering(constraint: CharSequence?): FilterResults {
                 val filterPattern = constraint.toString().trim().lowercase(Locale.ROOT) ?: ""
@@ -90,7 +90,7 @@ class SongAdapter internal constructor(
                 constraint: CharSequence?, results: FilterResults?
             ) {
                 songs.clear()
-                if (results?.values != null){
+                if (results?.values != null) {
                     songs.addAll(results.values as List<MediaItem?>)
                 }
                 notifyDataSetChanged()

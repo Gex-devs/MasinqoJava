@@ -6,18 +6,23 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Filter
+import android.widget.Filterable
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.media3.common.MediaItem
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import java.util.Locale
 
 class AlbumAdapter internal constructor(
     private val albums: ArrayList<MediaItem?>,
     private val context: Context,
     private val onItemClick: (position: Int) -> Unit
-) : RecyclerView.Adapter<AlbumAdapter.AlbumViewHolder>() {
+) : RecyclerView.Adapter<AlbumAdapter.AlbumViewHolder>(), Filterable {
+
+    private var albumsFull: List<MediaItem?> = ArrayList(albums)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AlbumViewHolder {
         val view =
@@ -74,6 +79,35 @@ class AlbumAdapter internal constructor(
         val albumSize = albums.size
         return albumSize
 
+    }
+
+    override fun getFilter(): Filter? {
+        return object : Filter() {
+            override fun performFiltering(constraint: CharSequence?): FilterResults? {
+                val filterPattern = constraint.toString().trim().lowercase(Locale.ROOT) ?: ""
+                val filteredList = if (filterPattern.isEmpty()) {
+                    albumsFull
+                } else {
+                    albumsFull.filter { item ->
+                        val metadata = item?.mediaMetadata
+                        metadata?.title?.toString()?.lowercase(Locale.ROOT)
+                            ?.contains(filterPattern) == true ||
+                                metadata?.artist?.toString()?.lowercase(Locale.ROOT)
+                                    ?.contains(filterPattern) == true
+                    }
+                }
+                return FilterResults().apply { values = filteredList }
+            }
+
+            override fun publishResults(constraint: CharSequence?, result: FilterResults?) {
+                albums.clear()
+                if (result?.values != null) {
+                    albums.addAll(result.values as List<MediaItem?>)
+                }
+                notifyDataSetChanged()
+            }
+
+        }
     }
 
     class AlbumViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {

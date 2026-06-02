@@ -6,18 +6,23 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Filter
+import android.widget.Filterable
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.media3.common.MediaItem
 import androidx.recyclerview.widget.RecyclerView
+import java.util.Locale
 
 
 class GenreAdapter internal constructor(
     private val genres: ArrayList<MediaItem?>,
     private val context: Context,
     private val onItemClick: (position: Int) -> Unit
-) : RecyclerView.Adapter<GenreAdapter.GenreViewHolder>() {
+) : RecyclerView.Adapter<GenreAdapter.GenreViewHolder>(), Filterable {
+
+    private var genresFull: List<MediaItem?> = ArrayList(genres)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GenreViewHolder {
         val view =
@@ -59,6 +64,31 @@ class GenreAdapter internal constructor(
 
     override fun getItemCount(): Int {
         return genres.size
+    }
+
+    override fun getFilter(): Filter? {
+        return object : Filter(){
+            override fun performFiltering(constraint: CharSequence?): FilterResults? {
+                val filterPattern = constraint.toString().trim().lowercase(Locale.ROOT) ?: ""
+                val filteredList = if (filterPattern.isEmpty()){
+                    genresFull
+                }else{
+                    genresFull.filter { item ->
+                        val metadata = item?.mediaMetadata
+                        metadata?.title?.toString()?.lowercase(Locale.ROOT)?.contains(filterPattern) == true
+                    }
+                }
+                return FilterResults().apply { values = filteredList }
+            }
+
+            override fun publishResults(constraint: CharSequence?, result: FilterResults?) {
+                genres.clear()
+                if (result?.values != null){
+                    genres.addAll(result.values as List<MediaItem>)
+                }
+                notifyDataSetChanged()
+            }
+        }
     }
 
     class GenreViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {

@@ -38,4 +38,8 @@ class GenreFragment : Fragment() {
         }
         return view
     }
+
+    fun filterGenre(query: String) {
+        genreAdapter?.filter?.filter(query)
+    }
 }
