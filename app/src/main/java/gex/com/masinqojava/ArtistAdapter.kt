@@ -6,23 +6,27 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewParent
 import android.widget.Filter
 import android.widget.Filterable
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.media3.common.MediaItem
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import gex.com.masinqojava.R
-import gex.com.masinqojava.gex.com.masinqojava.OpenedArtistFragment
-import org.w3c.dom.Text
+import gex.com.masinqojava.dataimport.AppDatabase
+import gex.com.masinqojava.dataimport.ArtistImage
+import gex.com.masinqojava.networkimport.RetrofitInstance
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class ArtistAdapter internal constructor(
-    private val artists: ArrayList<MediaItem?>,
+    private var artists: ArrayList<MediaItem?>,
     private val context: Context,
+    private val lifecycleScope: LifecycleCoroutineScope,
     private val onItemClick: (position: Int) -> Unit
 ) : RecyclerView.Adapter<ArtistAdapter.ArtistViewHolder>(), Filterable {
 
@@ -34,15 +38,17 @@ class ArtistAdapter internal constructor(
         return ArtistViewHolder(view)
     }
 
-    override fun onBindViewHolder(
-        holder: ArtistViewHolder,
-        position: Int
-    ) {
+    override fun onBindViewHolder(holder: ArtistViewHolder, position: Int) {
         val artist = artists[position] ?: return
         val metadata = artist.mediaMetadata
+        // Split at comma and take the first name
+        val fullArtistName = metadata.artist?.toString() ?: "Unknown artist"
+        val artistName = fullArtistName.split(",", "/", "&", " - ")[0].trim()
+
         val albumCount = metadata.extras?.getInt("album_count") ?: 0
         val songCount = metadata.extras?.getInt("track_count") ?: 0
-        holder.albumTitle.text = metadata.artist ?: "Unknown Artist"
+        
+        holder.albumTitle.text = fullArtistName
         holder.numberOfSongs.text =
             context.resources.getQuantityString(R.plurals.track_count_labels, songCount, songCount)
         holder.numberOfAlbums.text = context.resources.getQuantityString(
@@ -51,29 +57,51 @@ class ArtistAdapter internal constructor(
             albumCount
         )
 
-        Glide.with(context).asBitmap()
+        // 1. Initial load: Load the local representative art.
+        Glide.with(context)
             .load(metadata.artworkUri)
-            .thumbnail(
-                Glide.with(context)
-                    .asBitmap()
-                    .load(R.drawable.artists_temp)
-                    .centerInside()
-            )
             .placeholder(R.drawable.artists_temp)
             .error(R.drawable.artists_temp)
             .centerInside()
             .into(holder.albumArt)
+
+        // 2. Reliable Network Fetch logic using coroutine
+        lifecycleScope.launch {
+            val artistDao = AppDatabase.getDatabase(context).artistDao()
+            val localArtist = artistDao.getArtistByName(artistName)
+
+            if (localArtist?.imageUrl != null) {
+                withContext(Dispatchers.Main) {
+                    Glide.with(context).load(localArtist.imageUrl).into(holder.albumArt)
+                }
+            } else {
+                try {
+                    val response = RetrofitInstance.api.searchArtist(artistName)
+                    val deezerArtist = response.data.firstOrNull()
+
+                    if (deezerArtist != null) {
+                        val imageUrl = deezerArtist.picture_medium
+
+                        artistDao.insertArtist(ArtistImage(Id= deezerArtist.id, artistName = artistName, imageUrl = imageUrl))
+
+                        withContext(Dispatchers.Main) {
+                            Glide.with(context).load(imageUrl).into(holder.albumArt)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("Deezer", "Fetch failed: ${e.message}")
+                }
+            }
+        }
+
         holder.itemView.setOnClickListener {
             try {
-                val artistIdString = artist.mediaId
-                val artistId = artistIdString.toLongOrNull() ?: -1L
-
+                val artistId = artist.mediaId.toLongOrNull() ?: -1L
                 val fragment = OpenedArtistFragment().apply {
                     arguments = Bundle().apply {
                         putLong("ARTIST_ID", artistId)
                     }
                 }
-
                 val activity = context as? AppCompatActivity
                 activity?.supportFragmentManager?.beginTransaction()
                     ?.setCustomAnimations(android.R.anim.fade_in, android.R.anim.fade_out)
@@ -81,41 +109,34 @@ class ArtistAdapter internal constructor(
                     ?.addToBackStack(null)
                     ?.commit()
             } catch (e: Exception) {
-                Log.d("ArtistAdapter", "Click failed: ${e.message}")
+                Log.e("ArtistAdapter", "Fragment transition failed: ${e.message}")
+                onItemClick(position)
             }
-            Log.d("ArtistAdapter", "Artist: ${metadata.artist}, Uri: ${metadata.artworkUri}")
         }
     }
 
-    override fun getItemCount(): Int {
-        val artistSize = artists.size
-        return artistSize
-    }
+    override fun getItemCount(): Int = artists.size
 
-    override fun getFilter(): Filter? {
-        return object : Filter() {
-            override fun performFiltering(constraint: CharSequence?): FilterResults? {
-                val filterPattern = constraint.toString().trim().lowercase(Locale.ROOT) ?: ""
-                val filteredList = if (filterPattern.isEmpty()) {
-                    artistsFull
-                }else{
-                    artistsFull.filter { item ->
-                        val metadata = item?.mediaMetadata
-                        metadata?.artist?.toString()?.lowercase(Locale.ROOT)
-                            ?.contains(filterPattern) == true || metadata?.title?.toString()?.lowercase(
-                            Locale.ROOT)?.contains(filterPattern) == true
-                    }
+    override fun getFilter(): Filter = object : Filter() {
+        override fun performFiltering(constraint: CharSequence?): FilterResults {
+            val filterPattern = constraint.toString().trim().lowercase(Locale.ROOT)
+            val filteredList = if (filterPattern.isEmpty()) {
+                artistsFull
+            } else {
+                artistsFull.filter { item ->
+                    item?.mediaMetadata?.artist?.toString()?.lowercase(Locale.ROOT)?.contains(filterPattern) == true
                 }
-                return FilterResults().apply { values = filteredList }
             }
+            return FilterResults().apply { values = filteredList }
+        }
 
-            override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
-                artists.clear()
-                if (results?.values != null){
-                    artists.addAll(results.values as List<MediaItem?>)
-                }
-                notifyDataSetChanged()
+        override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+            artists.clear()
+            if (results?.values != null) {
+                @Suppress("UNCHECKED_CAST")
+                artists.addAll(results.values as List<MediaItem?>)
             }
+            notifyDataSetChanged()
         }
     }
 

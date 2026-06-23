@@ -1,4 +1,4 @@
-package gex.com.masinqojava.gex.com.masinqojava
+package gex.com.masinqojava
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -6,9 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import gex.com.masinqojava.MainActivity
-import gex.com.masinqojava.MusicLoader
-import gex.com.masinqojava.SongAdapter
 import gex.com.masinqojava.databinding.FragmentOpenedArtistBinding
 
 class OpenedArtistFragment : Fragment() {

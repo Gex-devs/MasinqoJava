@@ -60,6 +60,11 @@ class SongAdapter internal constructor(
         var songDuration: TextView = itemView.findViewById(R.id.audio_duration)
     }
 
+    fun updateList(newList: List<MediaItem?>) {
+        songs.clear()
+        songs.addAll(newList)
+        notifyDataSetChanged()
+    }
 
     private fun formatDuration(rawDuration: Int?): String {
         val seconds = (rawDuration?.div(1000))?.rem(60)

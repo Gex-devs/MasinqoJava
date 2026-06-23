@@ -6,7 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 class ArtistFragment : Fragment() {
@@ -22,18 +23,18 @@ class ArtistFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_artists, container, false)
         recyclerView = view.findViewById(R.id.artist_recycler)
         recyclerView?.setHasFixedSize(true)
-        if ((MainActivity.artists?.isNotEmpty() == true)) {
-            artistAdapter = ArtistAdapter(MainActivity.artists!!, requireContext()) { position ->
+        
+        if (MainActivity.artists?.isNotEmpty() == true) {
+            // Passing viewLifecycleOwner.lifecycleScope to the adapter
+            artistAdapter = ArtistAdapter(
+                MainActivity.artists!!, 
+                requireContext(), 
+                viewLifecycleOwner.lifecycleScope
+            ) { position ->
                 (activity as? MainActivity)?.openArtist(position)
             }
-            recyclerView?.setAdapter(artistAdapter)
-            recyclerView?.setLayoutManager(
-                LinearLayoutManager(
-                    context,
-                    RecyclerView.VERTICAL,
-                    false
-                )
-            )
+            recyclerView?.adapter = artistAdapter
+            recyclerView?.layoutManager = GridLayoutManager(context, 3)
         } else {
             Toast.makeText(context, "No artists found!", Toast.LENGTH_SHORT).show()
         }
@@ -44,4 +45,3 @@ class ArtistFragment : Fragment() {
         artistAdapter?.filter?.filter(query)
     }
 }
-

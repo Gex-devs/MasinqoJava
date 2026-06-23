@@ -18,14 +18,15 @@ import androidx.media3.common.Player
 import androidx.media3.session.SessionToken
 import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions
+import com.bumptech.glide.request.RequestOptions
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.android.material.tabs.TabLayoutMediator.TabConfigurationStrategy
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import kotlin.jvm.java
-
+import jp.wasabeef.glide.transformations.BlurTransformation
 
 class MainActivity : AppCompatActivity() {
 
@@ -36,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var songTitle: TextView
     private lateinit var songArtist: TextView
     private lateinit var songArtwork: ShapeableImageView
+    private lateinit var backgroundArtwork: ImageView
     private lateinit var searchView: androidx.appcompat.widget.SearchView
     private var controllerFuture: ListenableFuture<MediaController>? = null
     val controller: MediaController?
@@ -46,7 +48,6 @@ class MainActivity : AppCompatActivity() {
             controller?.let {
                 if (it.isPlaying) {
                     progressBar.progress = it.currentPosition.toInt()
-
                 }
                 handler.postDelayed(this, 1000)
             }
@@ -64,12 +65,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        MediaController.releaseFuture(controllerFuture!!)
+        handler.removeCallbacks(updateProgressAction)
+        controller?.let {
+            MediaController.releaseFuture(controllerFuture!!)
+        }
     }
 
     private fun setupUIWithPlayer(connectPlayer: Player?) {
         if (connectPlayer == null) return
 
+        // Initial UI sync
+        updateMiniPlayerUI(connectPlayer.mediaMetadata)
+        
         connectPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 btnPlayPause.setImageResource(
@@ -82,25 +89,40 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
-                    progressBar.max = controller?.duration?.toInt() ?: 0
+                    progressBar.max = connectPlayer.duration.toInt()
                     handler.post(updateProgressAction)
                 }
             }
 
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-                songTitle.text = mediaMetadata.title ?: "Unknown Title"
-                songArtist.text = mediaMetadata.artist ?: "Unknown Artist"
-
-                songTitle.isSelected = true
-                songArtist.isSelected = true
-
-                Glide.with(this@MainActivity)
-                    .load(mediaMetadata.artworkUri)
-                    .placeholder(R.drawable.default_thumbnail)
-                    .error(R.drawable.artists_temp)
-                    .into(songArtwork)
+                updateMiniPlayerUI(mediaMetadata)
             }
         })
+    }
+
+    private fun updateMiniPlayerUI(metadata: MediaMetadata) {
+        songTitle.text = metadata.title ?: "Unknown Title"
+        songArtist.text = metadata.artist ?: "Unknown Artist"
+
+        songTitle.isSelected = true
+        songArtist.isSelected = true
+
+        // 1. Small icon artwork
+        Glide.with(this@MainActivity)
+            .load(metadata.artworkUri)
+            .placeholder(R.drawable.default_thumbnail)
+            .error(R.drawable.default_thumbnail)
+            .into(songArtwork)
+
+        // 2. Background Frosted Artwork (OPTIMIZED)
+        // load() ensures blurred default art is shown if artworkUri is null.
+        // asBitmap() ensures vectors are rasterized before blurring.
+        Glide.with(this@MainActivity)
+            .asBitmap()
+            .load(metadata.artworkUri ?: R.drawable.default_thumbnail)
+            .apply(RequestOptions.bitmapTransform(BlurTransformation(25, 10)))
+            .transition(BitmapTransitionOptions.withCrossFade())
+            .into(backgroundArtwork)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -114,6 +136,7 @@ class MainActivity : AppCompatActivity() {
         songArtist = findViewById(R.id.player_artist)
         searchView = findViewById(R.id.search_view)
         songArtwork = findViewById(R.id.art_work)
+        backgroundArtwork = findViewById(R.id.background_artwork)
 
         findViewById<ImageButton>(R.id.btn_previous).setOnClickListener {
             controller?.seekToPreviousMediaItem()
@@ -130,11 +153,9 @@ class MainActivity : AppCompatActivity() {
 
             override fun onQueryTextChange(newText: String?): Boolean {
                 val query = newText ?: ""
-
                 val fragments = supportFragmentManager.fragments
                 for (fragment in fragments) {
-
-                    when(fragment){
+                    when (fragment) {
                         is SongFragment -> fragment.filterSongs(query)
                         is ArtistFragment -> fragment.filterArtist(query)
                         is AlbumFragment -> fragment.filterAlbums(query)
@@ -147,31 +168,28 @@ class MainActivity : AppCompatActivity() {
 
         btnPlayPause.setOnClickListener {
             controller?.let {
-                if (it.isPlaying) {
-                    it.pause()
-                } else {
-                    it.play()
-                }
+                if (it.isPlaying) it.pause() else it.play()
             }
         }
+        
         findViewById<View>(R.id.meta_info).setOnClickListener {
-            val bottomSheet = PlayerBottomSheet(controller!!)
-            bottomSheet.show(supportFragmentManager, "PlayerBottomSheet")
+            controller?.let {
+                val bottomSheet = PlayerBottomSheet(it)
+                bottomSheet.show(supportFragmentManager, "PlayerBottomSheet")
+            }
         }
 
         permissionManager = PermissionManager(this) {
             initViewPager()
         }
         permissionManager.requestRuntimePermission()
-
     }
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String?>,
-        grantResults: IntArray,
-
-        ) {
+        grantResults: IntArray
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         permissionManager.handlePermissionResult(requestCode, grantResults)
     }
@@ -187,8 +205,8 @@ class MainActivity : AppCompatActivity() {
 
     fun openAlbum(position: Int) {
         val selectedAlbum = albums?.get(position)
-        val albumId = selectedAlbum?.mediaId?.toLong()
-        val albumSongs = MusicLoader.getSongsByAlbum(this, albumId!!)
+        val albumId = selectedAlbum?.mediaId?.toLong() ?: return
+        val albumSongs = MusicLoader.getSongsByAlbum(this, albumId)
 
         if (albumSongs.isNotEmpty()) {
             controller?.let {
@@ -202,8 +220,8 @@ class MainActivity : AppCompatActivity() {
 
     fun openGenre(position: Int) {
         val selectedGenre = genres?.get(position)
-        val genreId = selectedGenre?.mediaId?.toLong()
-        val genreSongs = MusicLoader.getSongsByGenre(this, genreId!!)
+        val genreId = selectedGenre?.mediaId?.toLong() ?: return
+        val genreSongs = MusicLoader.getSongsByGenre(this, genreId)
 
         if (genreSongs.isNotEmpty()) {
             controller?.let {
@@ -217,8 +235,8 @@ class MainActivity : AppCompatActivity() {
 
     fun openArtist(position: Int) {
         val selectedArtist = artists?.get(position)
-        val artistId = selectedArtist?.mediaId?.toLong()
-        val artistSongs = MusicLoader.getSongsByArtist(this, artistId!!)
+        val artistId = selectedArtist?.mediaId?.toLong() ?: return
+        val artistSongs = MusicLoader.getSongsByArtist(this, artistId)
 
         if (artistSongs.isNotEmpty()) {
             controller?.let {
@@ -233,9 +251,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(updateProgressAction)
-        controller?.release()
     }
-
 
     fun initViewPager() {
         val viewPager = findViewById<ViewPager2>(R.id.viewpager)
@@ -245,14 +261,13 @@ class MainActivity : AppCompatActivity() {
         viewPagerAdapter.addFragment(ArtistFragment(), "Artists")
         viewPagerAdapter.addFragment(AlbumFragment(), "Albums")
         viewPagerAdapter.addFragment(GenreFragment(), "Genres")
-        viewPager.setAdapter(viewPagerAdapter)
+        viewPager.adapter = viewPagerAdapter
         TabLayoutMediator(
             tabLayout, viewPager, (TabConfigurationStrategy { tab: TabLayout.Tab?, position: Int ->
                 tab!!.text = viewPagerAdapter.getTitle(position)
             })
         ).attach()
     }
-
 
     companion object {
         const val REQUEST_READ_STORAGE_PERMISSION = 100
@@ -265,6 +280,5 @@ class MainActivity : AppCompatActivity() {
         var albums: ArrayList<MediaItem?>? = null
         var artists: ArrayList<MediaItem?>? = null
         var genres: ArrayList<MediaItem?>? = null
-
     }
 }

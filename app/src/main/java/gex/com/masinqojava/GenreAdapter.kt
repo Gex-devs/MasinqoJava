@@ -13,6 +13,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.media3.common.MediaItem
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import java.util.Locale
 
 
@@ -37,6 +38,13 @@ class GenreAdapter internal constructor(
         holder.genreName.text = metadata.title ?: "Unknown Genre"
         holder.numberOfSongs.text =
             context.resources.getQuantityString(R.plurals.track_count_labels, count, count)
+
+        Glide.with(context)
+            .load(metadata.artworkUri)
+            .placeholder(R.drawable.genres)
+            .error(R.drawable.genres)
+            .centerCrop()
+            .into(holder.genreImage)
 
         holder.itemView.setOnClickListener {
             try {

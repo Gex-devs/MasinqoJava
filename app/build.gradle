@@ -3,18 +3,24 @@ plugins {
 //  id 'com.android.application'
     id 'com.google.gms.google-services'
     alias(libs.plugins.kotlinAndroid)
+    id 'kotlin-kapt'
 }
 
 android {
     namespace 'gex.com.masinqojava'
     compileSdk 36
-
     defaultConfig {
         applicationId "gex.com.masinqojava"
         minSdk 28
         targetSdk 34
         versionCode 1
         versionName "1.0"
+
+        def properties = new Properties()
+        if (project.rootProject.file('local.properties').exists()) {
+            properties.load(project.rootProject.file('local.properties').newDataInputStream())
+        }
+        buildConfigField "String", "LASTFM_API_KEY", "\"${properties.getProperty("LASTFM_API_KEY") ?: ""}\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -32,8 +38,9 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
-    buildFeatures{
+    buildFeatures {
         viewBinding true
+        buildConfig true
     }
 }
 
@@ -50,6 +57,18 @@ dependencies {
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
+    implementation "com.squareup.retrofit2:retrofit:3.0.0"
+    implementation "com.squareup.retrofit2:converter-gson:3.0.0"
+    // Coroutines core and Android support
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
+    // Lifecycle-aware scopes (allows using lifecycleScope and viewModelScope)
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.6.2"
+    implementation "com.squareup.okhttp3:logging-interceptor:4.12.0"
+
+    def room_version = "2.7.0-alpha11"
+    implementation "androidx.room:room-runtime:$room_version"
+    implementation "androidx.room:room-ktx:$room_version" // Coroutines support for Room
+    kapt "androidx.room:room-compiler:$room_version"
 
     implementation platform('com.google.firebase:firebase-bom:33.1.2')
 
@@ -58,10 +77,12 @@ dependencies {
     //Glide dependency
 
     implementation 'com.github.bumptech.glide:glide:4.16.0'
+    implementation 'jp.wasabeef:glide-transformations:4.3.0'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     implementation "androidx.media3:media3-exoplayer:1.10.0"
     implementation "androidx.media3:media3-ui:1.10.0"
     implementation "androidx.media3:media3-common:1.10.0"
+    implementation "androidx.palette:palette-ktx:1.0.0"
 
 }
 java {

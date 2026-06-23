@@ -161,11 +161,37 @@ object MusicLoader {
             while (cursor.moveToNext()) {
                 val genreId = cursor.getLong(genreIdIdx)
                 val genreName = cursor.getString(genreNameIdx)
+
+                val membersUri = MediaStore.Audio.Genres.Members.getContentUri("external", genreId)
+                val membersProjection = arrayOf(MediaStore.Audio.Media.ALBUM_ID)
+                var representativeAlbumId: Long = -1
+                var trackCount = 0
+
+                context.contentResolver.query(membersUri, membersProjection, null, null, null)?.use { membersCursor ->
+                    trackCount = membersCursor.count
+                    if (membersCursor.moveToFirst()) {
+                        representativeAlbumId = membersCursor.getLong(membersCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID))
+                    }
+                }
+
+                val artUri = if (representativeAlbumId != -1L) {
+                    ContentUris.withAppendedId(
+                        "content://media/external/audio/albumart".toUri(),
+                        representativeAlbumId
+                    )
+                } else {
+                    null
+                }
+
                 val mediaItem = MediaItem.Builder()
                     .setMediaId(genreId.toString())
                     .setMediaMetadata(
                         MediaMetadata.Builder()
                             .setTitle(genreName)
+                            .setArtworkUri(artUri)
+                            .setExtras(android.os.Bundle().apply {
+                                putInt("track_count", trackCount)
+                            })
                             .build()
                     )
                     .build()
