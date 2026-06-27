@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
     <!-- Core Palette -->
     <color name="black">#121212</color> <!-- Spotify Dark -->
     <color name="white">#FFFFFF</color>

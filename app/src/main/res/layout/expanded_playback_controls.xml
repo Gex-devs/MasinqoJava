@@ -5,7 +5,6 @@
     android:layout_height="match_parent"
     android:background="@color/black">
 
-    <!-- Fixed Background Artwork -->
     <ImageView
         android:id="@+id/background_artwork"
         android:layout_width="match_parent"
@@ -13,13 +12,11 @@
         android:contentDescription="@null"
         android:scaleType="centerCrop" />
 
-    <!-- Fixed Frosted Overlay -->
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#66000000" />
 
-    <!-- Scrollable content layer -->
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/coordinator_layout"
         android:layout_width="match_parent"
@@ -28,37 +25,37 @@
         <com.google.android.material.appbar.AppBarLayout
             android:id="@+id/appBarLayout"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:background="@android:color/transparent">
 
             <com.google.android.material.appbar.CollapsingToolbarLayout
                 android:id="@+id/collapsingUI"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
-                <!-- Main Player UI -->
+                android:layout_height="wrap_content"
+                app:contentScrim="@android:color/transparent"
+                app:layout_scrollFlags="scroll|exitUntilCollapsed"
+                app:titleEnabled="false">
+
                 <androidx.constraintlayout.widget.ConstraintLayout
-                    android:id="@+id/content_container"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="20dp"
-                    app:layout_collapseMode="pin">
+                    android:layout_height="match_parent">
 
                     <View
                         android:id="@+id/sheet_handle"
                         android:layout_width="40dp"
                         android:layout_height="4dp"
+                        android:layout_marginTop="10dp"
                         android:background="@color/surface_light"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
-                    <!-- Artwork -->
                     <com.google.android.material.imageview.ShapeableImageView
                         android:id="@+id/art_work"
-                        android:layout_width="0dp"
-                        android:layout_height="0dp"
+                        android:layout_width="320dp"
+                        android:layout_height="320dp"
                         android:layout_marginTop="32dp"
-                        android:layout_marginBottom="32dp"
+                        android:layout_marginBottom="24dp"
                         android:scaleType="centerCrop"
                         android:src="@drawable/default_thumbnail"
                         app:layout_constraintDimensionRatio="1:1"
@@ -67,24 +64,27 @@
                         app:layout_constraintTop_toBottomOf="@id/sheet_handle"
                         app:shapeAppearanceOverlay="@style/RoundedCorners" />
 
+
                     <androidx.constraintlayout.widget.ConstraintLayout
                         android:id="@+id/bottom_controls_container"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="24dp"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/art_work">
+                        android:orientation="vertical"
+                        android:paddingHorizontal="24dp"
+                        android:paddingTop="16dp"
+                        app:layout_constraintTop_toBottomOf="@+id/art_work"
+
+                        >
 
                         <LinearLayout
                             android:id="@+id/meta_text"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="16dp"
                             android:gravity="center_vertical"
                             android:orientation="horizontal"
-                            app:layout_constraintBottom_toTopOf="@id/seekbar">
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent">
 
                             <LinearLayout
                                 android:layout_width="0dp"
@@ -116,31 +116,13 @@
                                     android:textSize="16sp" />
                             </LinearLayout>
 
-                            <ImageButton
-                                android:id="@+id/btn_queue_list"
-                                android:layout_width="48dp"
-                                android:layout_height="48dp"
-                                android:background="?attr/selectableItemBackgroundBorderless"
-                                android:contentDescription="@string/btn_queue_list"
-                                android:scaleType="centerInside"
-                                android:src="@drawable/queue_music"
-                                app:tint="@color/white" />
-                            <ImageButton
-                                android:id="@+id/btn_lyrics"
-                                android:layout_width="48dp"
-                                android:layout_height="48dp"
-                                android:background="?attr/selectableItemBackgroundBorderless"
-                                android:contentDescription="@string/btn_queue_list"
-                                android:scaleType="centerInside"
-                                android:src="@drawable/queue_music"
-                                app:tint="@color/white" />
                         </LinearLayout>
 
                         <SeekBar
                             android:id="@+id/seekbar"
                             android:layout_width="match_parent"
                             android:layout_height="33dp"
-                            android:layout_marginBottom="4dp"
+                            android:layout_marginTop="16dp"
                             android:maxHeight="4dp"
                             android:minHeight="4dp"
                             android:paddingStart="6dp"
@@ -148,40 +130,34 @@
                             android:progressDrawable="@drawable/custom_seekbar_progress"
                             android:splitTrack="false"
                             android:thumb="@drawable/custom_seekbar_thumb"
-                            app:layout_constraintBottom_toTopOf="@id/current_time"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent" />
+                            app:layout_constraintTop_toBottomOf="@id/meta_text" />
 
                         <TextView
                             android:id="@+id/current_time"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="12dp"
-                            android:paddingStart="6dp"
-                            android:paddingEnd="6dp"
+                            android:layout_marginTop="4dp"
                             android:textColor="@color/off_white"
                             android:textSize="12sp"
-                            app:layout_constraintBottom_toTopOf="@id/playback_controls"
-                            app:layout_constraintStart_toStartOf="parent" />
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@id/seekbar" />
 
                         <TextView
                             android:id="@+id/total_time"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="12dp"
-                            android:paddingStart="6dp"
-                            android:paddingEnd="6dp"
+                            android:layout_marginTop="4dp"
                             android:textColor="@color/off_white"
                             android:textSize="12sp"
-                            app:layout_constraintBottom_toTopOf="@id/playback_controls"
-                            app:layout_constraintEnd_toEndOf="parent" />
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintTop_toBottomOf="@id/seekbar" />
 
                         <androidx.constraintlayout.widget.ConstraintLayout
                             android:id="@+id/playback_controls"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="8dp"
-                            app:layout_constraintBottom_toBottomOf="parent">
+                            android:layout_marginTop="16dp"
+                            app:layout_constraintTop_toBottomOf="@id/current_time">
 
                             <ImageButton
                                 android:id="@+id/btn_shuffle"
@@ -257,44 +233,123 @@
                         </androidx.constraintlayout.widget.ConstraintLayout>
                     </androidx.constraintlayout.widget.ConstraintLayout>
                 </androidx.constraintlayout.widget.ConstraintLayout>
-            </com.google.android.material.appbar.CollapsingToolbarLayout>
 
+            </com.google.android.material.appbar.CollapsingToolbarLayout>
         </com.google.android.material.appbar.AppBarLayout>
 
         <androidx.core.widget.NestedScrollView
             android:id="@+id/nested_queue_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="gone"
+            android:fillViewport="true"
             app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-            <LinearLayout
-                android:id="@+id/queue_container"
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                app:layout_behavior="@string/appbar_scrolling_view_behavior">
-                <!-- Up Next header -->
-                <TextView
+                android:layout_height="wrap_content">
+                <LinearLayout
+                    android:id="@+id/queue_container"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingHorizontal="24dp"
-                    android:paddingBottom="8dp"
-                    android:text="@string/up_next"
-                    android:textColor="@color/white"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-                <!-- Queue RecyclerView -->
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/current_queue"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="24dp"
-                    android:layout_marginBottom="32dp"
-                    android:nestedScrollingEnabled="true" />
-            </LinearLayout>
+                    android:layout_height="match_parent"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/lyrics_empty_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:padding="24dp"
+                        android:text="@string/lyrics_not_found"
+                        android:textColor="@color/off_white"
+                        android:visibility="gone" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="300dp"
+                        android:layout_marginHorizontal="24dp"
+                        android:layout_marginVertical="24dp"
+                        android:background="@drawable/mini_player_overlay"
+                        android:orientation="vertical">
+
+                        <androidx.constraintlayout.widget.ConstraintLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:id="@+id/lyrics_title"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/lyrics"
+                                android:textColor="@color/white"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toTopOf="parent" />
+
+                            <LinearLayout
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:orientation="horizontal"
+                                android:background="@drawable/circle"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintTop_toTopOf="parent"
+                                android:padding="6dp">
+
+                                <com.google.android.material.imageview.ShapeableImageView
+                                    android:id="@+id/expand_collapse"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:src="@drawable/expand"
+                                    android:clickable="true"
+                                    android:focusable="true" />
+                            </LinearLayout>
+                        </androidx.constraintlayout.widget.ConstraintLayout>
+
+                        <FrameLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_weight="1">
+
+                            <androidx.compose.ui.platform.ComposeView
+                                android:id="@+id/lyrics_shimmer_view"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:visibility="gone" />
+
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/lyrics_recycler_view"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:clipToPadding="false"
+                                android:paddingBottom="16dp" />
+                        </FrameLayout>
+                    </LinearLayout>
+
+
+                    <TextView
+                        android:id="@+id/queue_header"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="24dp"
+                        android:paddingBottom="8dp"
+                        android:text="@string/up_next"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/current_queue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="24dp"
+                        android:layout_marginBottom="16dp"
+                        android:nestedScrollingEnabled="false" />
+
+                </LinearLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.core.widget.NestedScrollView>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

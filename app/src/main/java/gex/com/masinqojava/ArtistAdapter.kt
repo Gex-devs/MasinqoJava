@@ -76,7 +76,7 @@ class ArtistAdapter internal constructor(
                 }
             } else {
                 try {
-                    val response = RetrofitInstance.api.searchArtist(artistName)
+                    val response = RetrofitInstance.artistApi.searchArtist(artistName)
                     val deezerArtist = response.data.firstOrNull()
 
                     if (deezerArtist != null) {

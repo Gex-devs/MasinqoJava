@@ -1,5 +1,6 @@
 package gex.com.masinqojava
 
+
 import android.Manifest
 import android.content.ComponentName
 import android.os.Build
@@ -178,6 +179,7 @@ class MainActivity : AppCompatActivity() {
                 bottomSheet.show(supportFragmentManager, "PlayerBottomSheet")
             }
         }
+
 
         permissionManager = PermissionManager(this) {
             initViewPager()

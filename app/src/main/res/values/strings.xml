@@ -22,6 +22,9 @@
     <string name="btn_queue_list">btn_queue_list</string>
     <string name="up_next">Up Next</string>
     <string name="blurred_background">blurred background</string>
+    <string name="btn_lyrics">btn_lyrics</string>
+    <string name="lyrics_not_found">Lyrics not found</string>
+    <string name="lyrics">Lyrics</string>
     <plurals name="track_count_labels">
         <item quantity="one">%d Song</item>
         <item quantity="other">%d Songs</item>
