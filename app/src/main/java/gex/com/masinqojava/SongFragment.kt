@@ -1,20 +1,16 @@
 package gex.com.masinqojava
 
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.media3.common.MediaItem
+import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import java.time.temporal.TemporalQuery
-
 
 class SongFragment : Fragment() {
     var recyclerView: RecyclerView? = null
@@ -24,6 +20,8 @@ class SongFragment : Fragment() {
 
     private val newSongs by lazy { MusicLoader.getSongs(requireContext()) }
     val oldSongs = MainActivity.songs ?: emptyList()
+    private val playbackViewModel: PlaybackViewModel by activityViewModels()
+    private val playlistViewModel: PlaylistViewModel by activityViewModels()
 
 
     override fun onCreateView(
@@ -46,24 +44,32 @@ class SongFragment : Fragment() {
             swipeRefreshLayout?.isRefreshing = false
         }
         recyclerView!!.setHasFixedSize(true)
-        if ((MainActivity.songs?.isNotEmpty() == true)) {
-            songAdapter = SongAdapter(MainActivity.songs!!, requireContext()) { position ->
-                (activity as? MainActivity)?.playSong(position)
-            }
-            recyclerView!!.setAdapter(songAdapter)
-            recyclerView!!.setLayoutManager(
-                LinearLayoutManager(
-                    context,
-                    RecyclerView.VERTICAL,
-                    false
-                )
-            )
-        } else {
-            Toast.makeText(context, "No songs found", Toast.LENGTH_SHORT).show()
-        }
+
         return view
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val songs = MainActivity.songs
+        if (!songs.isNullOrEmpty()){
+            songAdapter = SongAdapter(
+                songs = songs,
+                context = requireContext(),
+                viewModel = playbackViewModel,
+                onItemClick = {pos->
+                    playbackViewModel.playList(songs,pos)
+                },
+                onMoreOptionClick = {song ->
+                    val optionSheet = SongOptionBottomSheet(song, playbackViewModel,playlistViewModel)
+                    optionSheet.show(childFragmentManager, "SongOptions")
+                }
+            )
+            recyclerView?.adapter = songAdapter
+            recyclerView?.layoutManager = LinearLayoutManager(requireContext())
+        }else{
+            Toast.makeText(context, "No songs found", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     fun filterSongs(query: String) {
         songAdapter?.filter?.filter(query)

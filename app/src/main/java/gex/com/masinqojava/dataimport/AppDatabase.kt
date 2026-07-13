@@ -5,10 +5,10 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [ArtistImage::class], version = 1)
+@Database(entities = [ArtistImage::class, PlaylistEntitiy::class, PlaylistSongCrossRef::class], version = 2)
 abstract class AppDatabase : RoomDatabase(){
     abstract fun artistDao(): ArtistDao
-
+    abstract fun playlistDao(): PlaylistDao
 
     companion object {
         @Volatile
@@ -20,7 +20,9 @@ abstract class AppDatabase : RoomDatabase(){
                 context.applicationContext,
                     AppDatabase::class.java,
                     "masinqo_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration(true)
+                .build()
                 INSTANCE = instance
                 instance
             }

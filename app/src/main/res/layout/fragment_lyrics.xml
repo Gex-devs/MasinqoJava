@@ -85,8 +85,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingBottom="24dp"
-        android:background="#CC000000"
-        app:layout_constraintBottom_toBottomOf="parent">
+
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginHorizontal="14dp"
+        >
 
         <SeekBar
             android:id="@+id/seekbar"

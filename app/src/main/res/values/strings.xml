@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MasinqoJava</string>
+    <string name="app_name">Masinqo</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="previous">Previous song</string>
@@ -25,6 +25,14 @@
     <string name="btn_lyrics">btn_lyrics</string>
     <string name="lyrics_not_found">Lyrics not found</string>
     <string name="lyrics">Lyrics</string>
+    <string name="song_more_options">song more options</string>
+    <string name="play_next">Play Next</string>
+    <string name="add_to_queue">Add to Queue</string>
+    <string name="remove_from_queue">Remove from queue</string>
+    <string name="play">Play</string>
+    <string name="add_to_playlist">Add to playlist</string>
+    <string name="remove_from_playlist">Remove from playlist</string>
+    <string name="add_playlist">Add Playlist</string>
     <plurals name="track_count_labels">
         <item quantity="one">%d Song</item>
         <item quantity="other">%d Songs</item>

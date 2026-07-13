@@ -11,19 +11,18 @@ import androidx.media3.common.MediaMetadata
 
 object MusicLoader {
 
+    private val SONG_PROJECTION = arrayOf(
+        MediaStore.Audio.Media.TITLE,
+        MediaStore.Audio.Media.ARTIST,
+        MediaStore.Audio.Media.DURATION,
+        MediaStore.Audio.Media.DATA,
+        MediaStore.Audio.Media.ALBUM_ID,
+        MediaStore.Audio.Media._ID
+    )
+
     fun getSongs(context: Context): ArrayList<MediaItem?> {
-
         val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-        val projection = arrayOf(
-            MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.DATA,
-            MediaStore.Audio.Media.ALBUM_ID,
-        )
-
-        val tempAudioList = resolver(context, uri, projection, null, null)
-        return tempAudioList
+        return resolver(context, uri, SONG_PROJECTION, null, null)
     }
 
     fun getAlbums(context: Context): ArrayList<MediaItem?> {
@@ -48,7 +47,7 @@ object MusicLoader {
                 val mediaItem = MediaItem.Builder()
                     .setMediaId(albumId.toString())
                     .setMediaMetadata(
-                        androidx.media3.common.MediaMetadata.Builder()
+                        MediaMetadata.Builder()
                             .setTitle(title)
                             .setArtist(artist)
                             .setArtworkUri(artUri)
@@ -59,7 +58,6 @@ object MusicLoader {
                     )
                     .build()
                 tempAlbumList.add(mediaItem)
-                Log.d("De Album list", "Album title: $title Artist: $artist")
             }
         }
         return tempAlbumList
@@ -69,15 +67,7 @@ object MusicLoader {
         val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         val selection = "${MediaStore.Audio.Media.ALBUM_ID} = ?"
         val selectionArgs = arrayOf(albumId.toString())
-
-        val projection = arrayOf(
-            MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.DATA,
-            MediaStore.Audio.Media.ALBUM_ID
-        )
-        return resolver(context, uri, projection, selection, selectionArgs)
+        return resolver(context, uri, SONG_PROJECTION, selection, selectionArgs)
     }
 
     fun getArtists(context: Context): ArrayList<MediaItem?> {
@@ -99,14 +89,11 @@ object MusicLoader {
                 val numberOfAlbums = cursor.getInt(2)
                 val numberOfSongs = cursor.getInt(3)
 
-
                 val trackProjection = arrayOf(MediaStore.Audio.Media.ALBUM_ID)
-
                 val trackSelection = "${MediaStore.Audio.Media.ARTIST_ID} = ?"
                 val trackSelectionArgs = arrayOf(artistId.toString())
 
                 var representativeAlbumId: Long = -1
-
                 context.contentResolver.query(
                     trackUri,
                     trackProjection,
@@ -141,7 +128,6 @@ object MusicLoader {
                     )
                     .build()
                 tempArtistList.add(mediaItem)
-                Log.d("De Artist list", "Artist name: $artistName")
             }
         }
         return tempArtistList
@@ -196,7 +182,6 @@ object MusicLoader {
                     )
                     .build()
                 tempGenreList.add(mediaItem)
-                Log.d("De Genre list", "Genre name: $genreName")
             }
         }
         return tempGenreList
@@ -204,30 +189,22 @@ object MusicLoader {
 
     fun getSongsByGenre(context: Context, genreId: Long): ArrayList<MediaItem?> {
         val uri = MediaStore.Audio.Genres.Members.getContentUri("external", genreId)
-        val projection = arrayOf(
-            MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.DATA,
-            MediaStore.Audio.Media.ALBUM_ID
-        )
-        return resolver(context, uri, projection, null, null)
-
+        return resolver(context, uri, SONG_PROJECTION, null, null)
     }
 
     fun getSongsByArtist(context: Context, artistId: Long): ArrayList<MediaItem?> {
         val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         val selection = "${MediaStore.Audio.Media.ARTIST_ID} = ?"
         val selectionArgs = arrayOf(artistId.toString())
+        return resolver(context, uri, SONG_PROJECTION, selection, selectionArgs)
+    }
 
-        val projection = arrayOf(
-            MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.DATA,
-            MediaStore.Audio.Media.ALBUM_ID
-        )
-        return resolver(context, uri, projection, selection, selectionArgs)
+    fun getSongsByIds(context: Context, ids: List<Long>): ArrayList<MediaItem?> {
+        if (ids.isEmpty()) return ArrayList()
+        val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val selection = "${MediaStore.Audio.Media._ID} IN (${ids.joinToString(",")})"
+        // Selection args not used with IN clause for simplicity here, but be careful with large lists
+        return resolver(context, uri, SONG_PROJECTION, selection, null)
     }
 
     fun resolver(
@@ -241,28 +218,26 @@ object MusicLoader {
         context.contentResolver.query(uri, projection, selection, selectionArgs, null)
             ?.use { cursor ->
                 while (cursor.moveToNext()) {
-                    //Indices of the columns in the cursor
                     val titleIdx = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
                     val artistIdx = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
-                    val durationIdx =
-                        cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+                    val durationIdx = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                     val pathIdx = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
-                    val albumIdIdx =
-                        cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+                    val albumIdIdx = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+                    val idIdx = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
 
-
-                    //Values of the columns
                     val title = cursor.getString(titleIdx)
                     val artist = cursor.getString(artistIdx)
                     val duration = cursor.getLong(durationIdx)
                     val path = cursor.getString(pathIdx)
                     val albumId = cursor.getLong(albumIdIdx)
+                    val id = cursor.getLong(idIdx)
+                    
                     val artUri = ContentUris.withAppendedId(
                         "content://media/external/audio/albumart".toUri(),
                         albumId
                     )
                     val mediaItem = MediaItem.Builder()
-                        .setMediaId(path)
+                        .setMediaId(id.toString())
                         .setUri(path)
                         .setMediaMetadata(
                             MediaMetadata.Builder()
@@ -274,11 +249,8 @@ object MusicLoader {
                         )
                         .build()
                     content.add(mediaItem)
-                    Log.d("De Song list", "path: $path artist: $artist")
                 }
             }
         return content
     }
-
-
 }

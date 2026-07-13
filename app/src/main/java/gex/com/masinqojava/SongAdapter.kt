@@ -1,27 +1,26 @@
 package gex.com.masinqojava
 
-import android.content.ContentUris
 import android.content.Context
-import android.media.MediaMetadataRetriever
-import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Filter
 import android.widget.Filterable
+import android.widget.ImageButton
 import android.widget.ImageView
+
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import java.io.IOException
 import java.util.Locale
-import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 
 class SongAdapter internal constructor(
     private val songs: ArrayList<MediaItem?>,
     private val context: Context,
-    private val onItemClick: (position: Int) -> Unit
+    private val viewModel: PlaybackViewModel,
+    private val onItemClick: (position: Int) -> Unit,
+    private val onMoreOptionClick: (song: MediaItem) -> Unit
 ) : RecyclerView.Adapter<SongAdapter.SongViewHolder>(), Filterable {
 
     private var songsFull: List<MediaItem?> = ArrayList(songs)
@@ -38,10 +37,19 @@ class SongAdapter internal constructor(
         holder.songTitle.text = metadata.title
         holder.songArtist.text = metadata.artist
         holder.songDuration.text = formatDuration(metadata.durationMs?.toInt())
-
-        Glide.with(context).asBitmap().load(metadata.artworkUri).thumbnail(
-            Glide.with(context).asBitmap().load(R.drawable.default_thumbnail).centerCrop()
-        ).placeholder(R.drawable.default_thumbnail).error(R.drawable.default_thumbnail).centerCrop()
+        holder.btnMoreOption.setOnClickListener {
+            onMoreOptionClick(song)
+        }
+        Glide.with(context)
+            .asBitmap()
+            .load(metadata.artworkUri)
+            .thumbnail(
+                Glide.with(context)
+                    .asBitmap()
+                    .load(R.drawable.default_thumbnail)
+                    .centerCrop()
+            ).placeholder(R.drawable.default_thumbnail).error(R.drawable.default_thumbnail)
+            .centerCrop()
             .into(holder.albumArt)
         holder.itemView.setOnClickListener {
             onItemClick(position)
@@ -58,12 +66,18 @@ class SongAdapter internal constructor(
         var songArtist: TextView = itemView.findViewById(R.id.audio_artist)
         var albumArt: ImageView = itemView.findViewById(R.id.audio_icon)
         var songDuration: TextView = itemView.findViewById(R.id.audio_duration)
+        var btnMoreOption: ImageButton = itemView.findViewById(R.id.btn_more_options)
     }
 
     fun updateList(newList: List<MediaItem?>) {
         songs.clear()
         songs.addAll(newList)
+        songsFull = ArrayList(songs)
         notifyDataSetChanged()
+    }
+    
+    fun getFilterableList(): List<MediaItem?> {
+        return songs
     }
 
     private fun formatDuration(rawDuration: Int?): String {
@@ -75,7 +89,7 @@ class SongAdapter internal constructor(
     override fun getFilter(): Filter {
         return object : Filter() {
             override fun performFiltering(constraint: CharSequence?): FilterResults {
-                val filterPattern = constraint.toString().trim().lowercase(Locale.ROOT) ?: ""
+                val filterPattern = constraint.toString().trim().lowercase(Locale.ROOT)
 
                 val filteredList = if (filterPattern.isEmpty()) {
                     songsFull

@@ -11,8 +11,10 @@ import android.widget.ImageView
 import androidx.media3.session.MediaController
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -41,6 +43,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var backgroundArtwork: ImageView
     private lateinit var searchView: androidx.appcompat.widget.SearchView
     private var controllerFuture: ListenableFuture<MediaController>? = null
+    private val viewModel: PlaybackViewModel by viewModels()
     val controller: MediaController?
         get() = if (controllerFuture?.isDone == true) controllerFuture?.get() else null
     val handler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -75,9 +78,10 @@ class MainActivity : AppCompatActivity() {
     private fun setupUIWithPlayer(connectPlayer: Player?) {
         if (connectPlayer == null) return
 
+        viewModel.setPlayer(connectPlayer)
         // Initial UI sync
         updateMiniPlayerUI(connectPlayer.mediaMetadata)
-        
+
         connectPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 btnPlayPause.setImageResource(
@@ -127,7 +131,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        splashScreen.setKeepOnScreenCondition {
+            controller == null
+        }
         setContentView(R.layout.activity_main)
 
         playerView = findViewById(R.id.custom_playback)
@@ -172,7 +180,7 @@ class MainActivity : AppCompatActivity() {
                 if (it.isPlaying) it.pause() else it.play()
             }
         }
-        
+
         findViewById<View>(R.id.meta_info).setOnClickListener {
             controller?.let {
                 val bottomSheet = PlayerBottomSheet(it)
@@ -194,15 +202,6 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         permissionManager.handlePermissionResult(requestCode, grantResults)
-    }
-
-    fun playSong(position: Int) {
-        val playlist = songs?.filterNotNull() ?: return
-        controller?.let {
-            it.setMediaItems(playlist, position, 0L)
-            it.prepare()
-            it.play()
-        }
     }
 
     fun openAlbum(position: Int) {
@@ -263,6 +262,7 @@ class MainActivity : AppCompatActivity() {
         viewPagerAdapter.addFragment(ArtistFragment(), "Artists")
         viewPagerAdapter.addFragment(AlbumFragment(), "Albums")
         viewPagerAdapter.addFragment(GenreFragment(), "Genres")
+        viewPagerAdapter.addFragment(PlaylistFragment(), "Playlists")
         viewPager.adapter = viewPagerAdapter
         TabLayoutMediator(
             tabLayout, viewPager, (TabConfigurationStrategy { tab: TabLayout.Tab?, position: Int ->

@@ -53,31 +53,105 @@ class PlaybackViewModel : ViewModel() {
 
     private fun updateShadowQueue() {
         val p = player ?: return
+
+        // 1. Capture current state on Main Thread
         val timeline = p.currentTimeline
+        val currentMediaItemIndex = p.currentMediaItemIndex
+        val repeatMode = p.repeatMode
+        val shuffleModeEnabled = p.shuffleModeEnabled
+        val mediaItemCount = p.mediaItemCount
+
         if (timeline.isEmpty) {
             _upcomingItems.value = emptyList()
             return
         }
 
-        val items = mutableListOf<Pair<Int, MediaItem>>()
-        var nextIndex = timeline.getNextWindowIndex(
-            p.currentMediaItemIndex,
-            p.repeatMode,
-            p.shuffleModeEnabled
-        )
-        val seenIndices = mutableSetOf<Int>()
-        seenIndices.add(p.currentMediaItemIndex)
-        val window = Timeline.Window()
+        // 2. Move the heavy loop to a background thread
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            val items = mutableListOf<Pair<Int, MediaItem>>()
+            val seenIndices = mutableSetOf<Int>()
+            seenIndices.add(currentMediaItemIndex)
 
-        while (nextIndex != C.INDEX_UNSET && !seenIndices.contains(nextIndex)) {
-            val mediaItem = timeline.getWindow(nextIndex, window).mediaItem
-            items.add(nextIndex to mediaItem)
+            val window = Timeline.Window()
 
-            seenIndices.add(nextIndex)
-            nextIndex = timeline.getNextWindowIndex(nextIndex, p.repeatMode, p.shuffleModeEnabled)
-            if (items.size >= 50) break
+            var nextIndex = timeline.getNextWindowIndex(
+                currentMediaItemIndex,
+                repeatMode,
+                shuffleModeEnabled
+            )
+
+            // Now we can loop through 100, 500, or 1000 items without freezing the UI
+            while (nextIndex != C.INDEX_UNSET && !seenIndices.contains(nextIndex)) {
+                // This call is the most expensive part of the loop
+                val mediaItem = timeline.getWindow(nextIndex, window).mediaItem
+                items.add(nextIndex to mediaItem)
+
+                seenIndices.add(nextIndex)
+                nextIndex = timeline.getNextWindowIndex(nextIndex, repeatMode, shuffleModeEnabled)
+
+                // Safety break just in case of massive playlists
+                if (items.size > 500) break
+            }
+
+            // 3. Post the result back to the Flow (Flow handles thread switching automatically)
+            _upcomingItems.value = items
+            Log.d("Queue", "Background calculation finished. Items in UI queue: ${items.size}")
         }
-        _upcomingItems.value = items
+    }
+
+    fun play(mediaItem: MediaItem) {
+        player?.let { p ->
+            p.setMediaItem(mediaItem)
+            p.prepare()
+            p.play()
+        }
+    }
+
+    fun playNext(mediaItem: MediaItem) {
+        player?.let { p ->
+            val nextIndex = if (p.mediaItemCount == 0) 0 else p.currentMediaItemIndex + 1
+            p.addMediaItem(nextIndex, mediaItem)
+            updateShadowQueue()
+        }
+    }
+
+    fun addToQueue(mediaItem: MediaItem) {
+        player?.let { p ->
+            p.addMediaItem(mediaItem)
+            updateShadowQueue()
+        }
+    }
+
+    fun removeFromQueue(mediaItem: MediaItem) {
+        player?.let { p ->
+            for (i in 0 until p.mediaItemCount) {
+                if (p.getMediaItemAt(i).mediaId == mediaItem.mediaId) {
+                    p.removeMediaItem(i)
+                    updateShadowQueue()
+                    break
+                }
+            }
+        }
+    }
+
+    fun removeFromQueue(index: Int) {
+        player?.let { p ->
+            if (index >= 0 && index < p.mediaItemCount) {
+                p.removeMediaItem(index)
+                updateShadowQueue()
+            }
+        }
+    }
+
+    fun playList(playlist: List<MediaItem?>, position: Int) {
+        player?.let { p ->
+            val filteredList = playlist.filterNotNull()
+            if (position >= 0 && position < filteredList.size) {
+                p.setMediaItems(filteredList, position, 0L)
+                p.prepare()
+                p.play()
+            }
+        }
     }
 
     fun setPlayer(p: Player) {
@@ -89,14 +163,16 @@ class PlaybackViewModel : ViewModel() {
         fetchLyrics(p.mediaMetadata, p.duration)
         updateShadowQueue()
     }
-    fun toggleShuffle(){
-        player?.let{
+
+    fun toggleShuffle() {
+        player?.let {
             it.shuffleModeEnabled = !it.shuffleModeEnabled
         }
     }
-    fun toggleRepeat(){
+
+    fun toggleRepeat() {
         player?.let {
-            it.repeatMode = when(it.repeatMode){
+            it.repeatMode = when (it.repeatMode) {
                 Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ONE
                 Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_ALL
                 Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_OFF
@@ -105,16 +181,19 @@ class PlaybackViewModel : ViewModel() {
         }
 
     }
-    fun setUserSeeking(seeking: Boolean){
+
+    fun setUserSeeking(seeking: Boolean) {
         isUserSeeking = seeking
-        if (!seeking){
+        if (!seeking) {
             player?.let { _currentPosition.value = it.currentPosition }
         }
     }
-    fun seekTo(positionMs: Long){
+
+    fun seekTo(positionMs: Long) {
         player?.seekTo(positionMs)
-            _currentPosition.value = positionMs
+        _currentPosition.value = positionMs
     }
+
     private fun startProgressPolling() {
         viewModelScope.launch {
             while (true) {
@@ -134,39 +213,43 @@ class PlaybackViewModel : ViewModel() {
         val title = metadata?.title?.toString() ?: "Unknown"
         val artist = metadata?.artist?.toString() ?: "Unknown"
         val songKey = "$title-$artist"
-        
+
         if (title == "Unknown" || artist == "Unknown") {
             _lyrics.value = emptyList()
             lastFetchedSongKey = null
             return
         }
-        
+
         if (songKey == lastFetchedSongKey && (_lyrics.value.isNotEmpty() || _isLyricsLoading.value)) {
             return
         }
-        
+
         lastFetchedSongKey = songKey
         _lyrics.value = emptyList()
         _isLyricsLoading.value = true
-        
+
         val cleanArtist = artist.split(",", "/", "&", " - ")[0].trim()
         Log.d("Lyrics", "Fetching: $title by $cleanArtist")
 
         viewModelScope.launch {
             try {
-                val durationSec = if (currentDuration > 0) (currentDuration / 1000).toInt() else null
-                val response = RetrofitInstance.lyricApi.getLyrics(cleanArtist, title, null, durationSec)
-                
+                val durationSec =
+                    if (currentDuration > 0) (currentDuration / 1000).toInt() else null
+                val response =
+                    RetrofitInstance.lyricApi.getLyrics(cleanArtist, title, null, durationSec)
+
                 val parsedLyrics = when {
                     response.syncedLyrics != null -> {
                         val parsed = parseLrc(response.syncedLyrics)
                         Log.d("Lyrics", "Parsed ${parsed.size} synced lines for $title")
                         parsed
                     }
+
                     response.plainLyrics != null -> {
                         Log.d("Lyrics", "Found plain lyrics for $title")
                         listOf(LyricLine(0, response.plainLyrics))
                     }
+
                     else -> {
                         Log.d("Lyrics", "No lyrics found in response for $title")
                         emptyList()
@@ -185,12 +268,12 @@ class PlaybackViewModel : ViewModel() {
     private fun parseLrc(lrcContent: String): List<LyricLine> {
         val lines = mutableListOf<LyricLine>()
         val timeTagRegex = Regex("\\[(\\d{1,2}):(\\d{2})(?:[.:](\\d{2,3}))?\\]")
-        
+
         lrcContent.lines().forEach { line ->
             val trimmedLine = line.trim()
             val matches = timeTagRegex.findAll(trimmedLine).toList()
             if (matches.isEmpty()) return@forEach
-            
+
             val text = trimmedLine.replace(timeTagRegex, "").trim()
             if (text.isNotEmpty()) {
                 matches.forEach { match ->

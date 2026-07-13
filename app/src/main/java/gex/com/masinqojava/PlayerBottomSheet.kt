@@ -10,7 +10,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.SeekBar
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.activityViewModels
@@ -22,20 +21,15 @@ import androidx.recyclerview.widget.LinearSmoothScroller
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions
 import com.bumptech.glide.request.RequestOptions
-import com.google.android.material.R
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import gex.com.masinqojava.LyricAdapter
-import gex.com.masinqojava.LyricShimmer
-import gex.com.masinqojava.LyricsFragment
-import gex.com.masinqojava.PlaybackViewModel
-import gex.com.masinqojava.SongAdapter
 import gex.com.masinqojava.databinding.ExpandedPlaybackControlsBinding
 import gex.com.masinqojava.dataimport.LyricLine
 import jp.wasabeef.glide.transformations.BlurTransformation
 import kotlinx.coroutines.launch
 import java.util.Locale
+import com.google.android.material.R as MaterialR
 
 class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment() {
     private var _binding: ExpandedPlaybackControlsBinding? = null
@@ -45,7 +39,8 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
 
     private lateinit var queueAdapter: SongAdapter
     private lateinit var lyricAdapter: LyricAdapter
-    private val viewModel: PlaybackViewModel by activityViewModels()
+    private val playbackViewModel: PlaybackViewModel by activityViewModels()
+    private val playlistViewModel: PlaylistViewModel by activityViewModels()
 
     private val lyricsUpdateAction = object : Runnable {
         override fun run() {
@@ -104,8 +99,9 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
         dialog.setOnShowListener {
-            val bottomSheet =
-                dialog.findViewById<FrameLayout>(R.id.design_bottom_sheet)
+            // Use the alias you created (MaterialR) to find the ID
+            val bottomSheet = dialog.findViewById<FrameLayout>(MaterialR.id.design_bottom_sheet)
+
             bottomSheet?.let {
                 val behavior = BottomSheetBehavior.from(it)
                 behavior.state = BottomSheetBehavior.STATE_EXPANDED
@@ -127,7 +123,7 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        viewModel.setPlayer(player)
+        playbackViewModel.setPlayer(player)
         lyricAdapter = LyricAdapter()
         binding.lyricsRecyclerView.adapter = lyricAdapter
         binding.lyricsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -144,49 +140,53 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
             lyricSheet.show(parentFragmentManager, "LyricsFragment")
         }
 
-        queueAdapter = SongAdapter(ArrayList(), requireContext()) { pos ->
-            val upcoming = viewModel.upcomingItems.value
-            if (pos in upcoming.indices) {
-                val targetIndex = upcoming[pos].first
-                player.seekTo(targetIndex, 0L)
-                player.play()
-            }
-        }
+        queueAdapter = SongAdapter(
+            ArrayList(), requireContext(), playbackViewModel,
+            onItemClick = { pos ->
+                val upcoming = playbackViewModel.upcomingItems.value
+                if (pos in upcoming.indices) {
+                    val targetIndex = upcoming[pos].first
+                    player.seekTo(targetIndex, 0L)
+                    player.play()
+                }
+            }, onMoreOptionClick = { song ->
+                val optionSheet = SongOptionBottomSheet(song, playbackViewModel, playlistViewModel)
+                optionSheet.show(childFragmentManager, "SongOptions")
+
+            })
         binding.currentQueue.layoutManager = LinearLayoutManager(context)
         binding.currentQueue.adapter = queueAdapter
 
         binding.btnShuffle.setOnClickListener {
-            viewModel.toggleShuffle()
+            playbackViewModel.toggleShuffle()
             updateShuffleRepeatUI()
         }
         binding.btnRepeat.setOnClickListener {
-            viewModel.toggleRepeat()
+            playbackViewModel.toggleRepeat()
             updateShuffleRepeatUI()
         }
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.lyrics.collect { lyrics ->
+            playbackViewModel.lyrics.collect { lyrics ->
                 lyricAdapter.setData(lyrics)
-                updateLyricsUIState(viewModel.isLoading.value)
+                updateLyricsUIState(playbackViewModel.isLoading.value)
                 if (lyrics.isNotEmpty()) {
                     lyricAdapter.updateActiveLine(player.currentPosition)
                 }
             }
         }
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.isLoading.collect { loading ->
+            playbackViewModel.isLoading.collect { loading ->
                 updateLyricsUIState(loading)
             }
         }
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.upcomingItems.collect { pairs ->
+            playbackViewModel.upcomingItems.collect { pairs ->
                 val displayList = pairs.map { it.second }
                 queueAdapter.updateList(displayList)
             }
         }
 
         syncUI()
-
-
 
         binding.btnPrevious.setOnClickListener { player.seekToPreviousMediaItem() }
         binding.btnNext.setOnClickListener { player.seekToNextMediaItem() }
@@ -196,7 +196,7 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
             override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) {
                 if (fromUser) {
                     // Tell ViewModel to seek and update the internal StateFlow
-                    viewModel.seekTo(p.toLong())
+                    playbackViewModel.seekTo(p.toLong())
 
                     // Update the text immediately for a smooth experience
                     binding.currentTime.text = formatDuration(p)
@@ -210,12 +210,12 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
 
             override fun onStartTrackingTouch(s: SeekBar?) {
                 // Stop the ViewModel from updating the progress flow while the user is dragging
-                viewModel.setUserSeeking(true)
+                playbackViewModel.setUserSeeking(true)
             }
 
             override fun onStopTrackingTouch(s: SeekBar?) {
                 // Resume normal progress updates
-                viewModel.setUserSeeking(false)
+                playbackViewModel.setUserSeeking(false)
             }
         })
     }
@@ -233,7 +233,7 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
         binding.queueHeader.visibility = if (showQueue) View.GONE else View.VISIBLE
 
         if (showLyrics) {
-            updateLyricsUIState(viewModel.isLoading.value)
+            updateLyricsUIState(playbackViewModel.isLoading.value)
         } else {
             binding.lyricsRecyclerView.visibility = View.GONE
             binding.lyricsShimmerView.visibility = View.GONE
@@ -310,18 +310,18 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
         binding.artistName.isSelected = true
 
         Glide.with(this)
-            .load(metadata.artworkUri ?: gex.com.masinqojava.R.drawable.default_thumbnail)
-            .placeholder(gex.com.masinqojava.R.drawable.default_thumbnail).into(binding.artWork)
+            .load(metadata.artworkUri ?: R.drawable.default_thumbnail)
+            .placeholder(R.drawable.default_thumbnail).into(binding.artWork)
 
         Glide.with(this).asBitmap()
-            .load(metadata.artworkUri ?: gex.com.masinqojava.R.drawable.default_thumbnail)
+            .load(metadata.artworkUri ?: R.drawable.default_thumbnail)
             .apply(RequestOptions.bitmapTransform(BlurTransformation(25, 15)))
             .transition(BitmapTransitionOptions.withCrossFade()).into(binding.backgroundArtwork)
     }
 
     private fun updatePlayPauseIcon(isPlaying: Boolean) {
         val binding = _binding ?: return
-        binding.btnPlayPause.setImageResource(if (isPlaying) gex.com.masinqojava.R.drawable.pause_with_circle else gex.com.masinqojava.R.drawable.play_with_circle)
+        binding.btnPlayPause.setImageResource(if (isPlaying) R.drawable.pause_with_circle else R.drawable.play_with_circle)
     }
 
     private fun updateShuffleRepeatUI() {
@@ -331,9 +331,9 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
         val isRepeatOn = player.repeatMode != Player.REPEAT_MODE_OFF
         binding.btnRepeat.alpha = if (isRepeatOn) 1.0f else 0.5f
         val repeatIcon = when (player.repeatMode) {
-            Player.REPEAT_MODE_ALL -> gex.com.masinqojava.R.drawable.repeat_all
-            Player.REPEAT_MODE_ONE -> gex.com.masinqojava.R.drawable.repeat_one
-            else -> gex.com.masinqojava.R.drawable.repeat
+            Player.REPEAT_MODE_ALL -> R.drawable.repeat_all
+            Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
+            else -> R.drawable.repeat
         }
         binding.btnRepeat.setImageResource(repeatIcon)
 
@@ -342,7 +342,7 @@ class PlayerBottomSheet(private val player: Player) : BottomSheetDialogFragment(
     private fun formatDuration(ms: Int): String {
         val seconds = (ms / 1000) % 60
         val minutes = (ms / (1000 * 60)) % 60
-        return String.format(Locale.ROOT, "%d:%02d", minutes, seconds)
+        return String.Companion.format(Locale.ROOT, "%d:%02d", minutes, seconds)
     }
 
     override fun onDestroyView() {

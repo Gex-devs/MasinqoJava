@@ -25,6 +25,10 @@
         <item name="cornerSize">50%</item>
     </style>
 
+    <style name="CircleShape">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
 
     <!-- Tab Styles -->
     <style name="AppTabLayoutStyle" parent="Widget.Material3.TabLayout">
@@ -39,5 +43,13 @@
         <item name="android:textSize">14sp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splashscreen_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/masinqo_no_bg</item>
+        <item name="windowSplashScreenIconBackgroundColor">#FF0000</item>
+        <item name="windowSplashScreenAnimationDuration">5000</item>
+        <item name="postSplashScreenTheme">@style/Theme.MasinqoJava</item>
     </style>
 </resources>

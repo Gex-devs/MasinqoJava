@@ -3,7 +3,6 @@ package gex.com.masinqojava
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,7 +10,6 @@ import android.widget.FrameLayout
 import android.widget.SeekBar
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
-import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -37,7 +35,8 @@ class LyricsFragment(private val player: Player) : BottomSheetDialogFragment() {
     private var isLyricsLoading = false
     private lateinit var queueAdapter: SongAdapter
 
-    private val viewModel: PlaybackViewModel by activityViewModels()
+    private val playbackViewModel: PlaybackViewModel by activityViewModels()
+    private val playlistViewModel: PlaylistViewModel by activityViewModels()
 
     private val lyricsUpdateAction = object : Runnable {
         override fun run() {
@@ -121,29 +120,35 @@ class LyricsFragment(private val player: Player) : BottomSheetDialogFragment() {
         binding.lyricsRecyclerView.adapter = lyricAdapter
         binding.lyricsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
 
-        queueAdapter = SongAdapter(ArrayList(), requireContext()) { position ->
-            val upcoming = viewModel.upcomingItems.value
-            if (position in upcoming.indices) {
-                val targetIndex = upcoming[position].first
-                player.seekTo(targetIndex, 0L)
-                player.play()
-            }
-        }
-        
+        queueAdapter = SongAdapter(
+            ArrayList(), requireContext(), playbackViewModel,
+            onItemClick = { pos ->
+                val upcoming = playbackViewModel.upcomingItems.value
+                if (pos in upcoming.indices) {
+                    val targetIndex = upcoming[pos].first
+                    player.seekTo(targetIndex, 0L)
+                    player.play()
+                }
+            }, onMoreOptionClick = { song ->
+                val optionSheet = SongOptionBottomSheet(song, playbackViewModel, playlistViewModel)
+                optionSheet.show(childFragmentManager, "SongOptions")
+
+            })
+
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.lyrics.collect { lyrics->
+            playbackViewModel.lyrics.collect { lyrics ->
                 lyricAdapter.setData(lyrics)
                 updateLyricsUIState()
             }
         }
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.isLoading.collect { loading->
+            playbackViewModel.isLoading.collect { loading ->
                 isLyricsLoading = loading
                 updateLyricsUIState()
             }
         }
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.upcomingItems.collect { pairs ->
+            playbackViewModel.upcomingItems.collect { pairs ->
                 val displayList = pairs.map { it.second }
                 queueAdapter.updateList(displayList)
             }
@@ -158,7 +163,7 @@ class LyricsFragment(private val player: Player) : BottomSheetDialogFragment() {
             binding.seekbar.max = duration
             binding.totalTime.text = formatDuration(duration)
         }
-        
+
         if (player.isPlaying) {
             handler.post(updateProgressAction)
             handler.post(lyricsUpdateAction)
@@ -168,21 +173,21 @@ class LyricsFragment(private val player: Player) : BottomSheetDialogFragment() {
             if (player.isPlaying) player.pause() else player.play()
         }
         binding.btnShuffle.setOnClickListener {
-            viewModel.toggleShuffle()
+            playbackViewModel.toggleShuffle()
             updateShuffleRepeatUI()
         }
         binding.btnRepeat.setOnClickListener {
-            viewModel.toggleRepeat()
+            playbackViewModel.toggleRepeat()
             updateShuffleRepeatUI()
         }
-        
+
         binding.btnPrevious.setOnClickListener { player.seekToPreviousMediaItem() }
         binding.btnNext.setOnClickListener { player.seekToNextMediaItem() }
         binding.seekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) {
                 if (fromUser) {
                     // Tell ViewModel to seek and update the internal StateFlow
-                    viewModel.seekTo(p.toLong())
+                    playbackViewModel.seekTo(p.toLong())
 
                     // Update the text immediately for a smooth experience
                     binding.currentTime.text = formatDuration(p)
@@ -196,12 +201,12 @@ class LyricsFragment(private val player: Player) : BottomSheetDialogFragment() {
 
             override fun onStartTrackingTouch(s: SeekBar?) {
                 // Stop the ViewModel from updating the progress flow while the user is dragging
-                viewModel.setUserSeeking(true)
+                playbackViewModel.setUserSeeking(true)
             }
 
             override fun onStopTrackingTouch(s: SeekBar?) {
                 // Resume normal progress updates
-                viewModel.setUserSeeking(false)
+                playbackViewModel.setUserSeeking(false)
             }
         })
     }
@@ -264,6 +269,7 @@ class LyricsFragment(private val player: Player) : BottomSheetDialogFragment() {
         if (_binding == null) return
         binding.btnPlayPause.setImageResource(if (isPlaying) R.drawable.pause_with_circle else R.drawable.play_with_circle)
     }
+
     private fun updateShuffleRepeatUI() {
 
         binding.btnShuffle.alpha = if (player.shuffleModeEnabled) 1.0f else 0.5f

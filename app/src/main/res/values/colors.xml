@@ -5,6 +5,8 @@
     <color name="black">#121212</color> <!-- Spotify Dark -->
     <color name="white">#FFFFFF</color>
     <color name="off_white">#B3B3B3</color> <!-- Spotify Secondary Text -->
+    <color name="splashscreen_background">#000000</color> <!-- Spotify Secondary Text -->
+
 
     <!-- Accents -->
     <color name="spotify_green">#1DB954</color>
