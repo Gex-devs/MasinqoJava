@@ -15,6 +15,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -30,6 +31,7 @@ import com.google.android.material.tabs.TabLayoutMediator.TabConfigurationStrate
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import jp.wasabeef.glide.transformations.BlurTransformation
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -79,23 +81,53 @@ class MainActivity : AppCompatActivity() {
         if (connectPlayer == null) return
 
         viewModel.setPlayer(connectPlayer)
-        // Initial UI sync
-        updateMiniPlayerUI(connectPlayer.mediaMetadata)
+
+
+        if (connectPlayer.mediaItemCount == 0) {
+            val lastMediaId = PlaybackSettings.getLastMediaId(this)
+            val songsList = MainActivity.songs
+
+            if (!songsList.isNullOrEmpty()) {
+                val songToLoad: MediaItem
+                val startPosition: Long
+
+                val savedIndex = songsList.indexOfFirst { it?.mediaId == lastMediaId }
+
+                if (lastMediaId != null && savedIndex != -1) {
+                    songToLoad = songsList[savedIndex]!!
+                    startPosition = PlaybackSettings.getLastPosition(this)
+
+                    connectPlayer.setMediaItem(songToLoad, startPosition)
+                    connectPlayer.prepare() // CRITICAL: Tell the player to load the data
+
+                    updateMiniPlayerUI(songToLoad.mediaMetadata)
+                } else {
+                    songToLoad = songsList[0]!!
+                    startPosition = 0L
+                }
+
+                connectPlayer.setMediaItem(songToLoad, startPosition)
+                connectPlayer.prepare() // CRITICAL: Tell the player to load the data
+
+                // Immediately update UI with the loaded song's metadata
+                updateMiniPlayerUI(songToLoad.mediaMetadata)
+            }
+        } else {
+            // If player was already playing (service was alive), sync UI immediately
+            updateMiniPlayerUI(connectPlayer.mediaMetadata)
+        }
+
+        // Sync Play/Pause icon state immediately upon opening
+        updatePlayPauseIcon(connectPlayer.isPlaying)
 
         connectPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                btnPlayPause.setImageResource(
-                    if (isPlaying) R.drawable.pause_with_circle
-                    else R.drawable.play_with_circle
-                )
-                if (isPlaying) handler.post(updateProgressAction)
-                else handler.removeCallbacks(updateProgressAction)
+                updatePlayPauseIcon(isPlaying)
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
                     progressBar.max = connectPlayer.duration.toInt()
-                    handler.post(updateProgressAction)
                 }
             }
 
@@ -103,6 +135,14 @@ class MainActivity : AppCompatActivity() {
                 updateMiniPlayerUI(mediaMetadata)
             }
         })
+    }
+
+    // Add this helper to MainActivity to keep icons in sync
+    private fun updatePlayPauseIcon(isPlaying: Boolean) {
+        btnPlayPause.setImageResource(
+            if (isPlaying) R.drawable.pause_with_circle
+            else R.drawable.play_with_circle
+        )
     }
 
     private fun updateMiniPlayerUI(metadata: MediaMetadata) {
@@ -153,6 +193,22 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_next).setOnClickListener {
             controller?.seekToNextMediaItem()
         }
+        lifecycleScope.launch {
+            viewModel.currentMetadata.collect { metadata ->
+                metadata?.let { updateMiniPlayerUI(it) }
+            }
+        }
+        lifecycleScope.launch {
+            viewModel.currentPosition.collect { position ->
+                progressBar.progress = position.toInt()
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.isPlaying.collect { isPlaying ->
+                updatePlayPauseIcon(isPlaying)
+            }
+        }
 
         searchView.setOnQueryTextListener(object :
             androidx.appcompat.widget.SearchView.OnQueryTextListener {
@@ -191,6 +247,7 @@ class MainActivity : AppCompatActivity() {
 
         permissionManager = PermissionManager(this) {
             initViewPager()
+            controller?.let { setupUIWithPlayer(it) }
         }
         permissionManager.requestRuntimePermission()
     }

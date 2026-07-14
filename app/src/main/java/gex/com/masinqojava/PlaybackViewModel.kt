@@ -1,6 +1,8 @@
 package gex.com.masinqojava
 
+import android.app.Application
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.C
@@ -14,11 +16,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class PlaybackViewModel : ViewModel() {
+class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
     private val _lyrics = MutableStateFlow<List<LyricLine>>(emptyList())
     val lyrics = _lyrics.asStateFlow()
     private val _isLyricsLoading = MutableStateFlow(false)
     val isLoading = _isLyricsLoading.asStateFlow()
+    private val  _isPlaying = MutableStateFlow(false)
+    val isPlaying = _isPlaying.asStateFlow()
+    private val _currentMetadata = MutableStateFlow<MediaMetadata?>(null)
+    val currentMetadata = _currentMetadata.asStateFlow()
     private var player: Player? = null
     private val _upcomingItems = MutableStateFlow<List<Pair<Int, MediaItem>>>(emptyList())
     val upcomingItems = _upcomingItems.asStateFlow()
@@ -28,7 +34,12 @@ class PlaybackViewModel : ViewModel() {
     private var lastFetchedSongKey: String? = null
 
     private val playerListener = object : Player.Listener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            _isPlaying.value = isPlaying
+        }
+
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+            _currentMetadata.value = mediaMetadata
             fetchLyrics(mediaMetadata, player?.duration ?: 0L)
             updateShadowQueue()
         }
@@ -49,6 +60,32 @@ class PlaybackViewModel : ViewModel() {
                 updateShadowQueue()
             }
         }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            super.onMediaItemTransition(mediaItem, reason)
+            _currentMetadata.value = mediaItem?.mediaMetadata
+            mediaItem?.let {
+                PlaybackSettings.saveLastTrack(
+                    getApplication(),
+                    it.mediaId,
+                    player?.currentPosition ?: 0L
+                )
+            }
+        }
+
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            super.onPlayWhenReadyChanged(playWhenReady, reason)
+            if (!playWhenReady) {
+                player?.let {
+                    PlaybackSettings.saveLastTrack(
+                        getApplication(),
+                        it.currentMediaItem?.mediaId ?: "",
+                        it.currentPosition
+                    )
+                }
+            }
+        }
+
     }
 
     private fun updateShadowQueue() {
@@ -159,6 +196,8 @@ class PlaybackViewModel : ViewModel() {
         this.player?.removeListener(playerListener)
         this.player = p
         p.addListener(playerListener)
+        _isPlaying.value = p.isPlaying
+        _currentMetadata.value = p.mediaMetadata
         startProgressPolling()
         fetchLyrics(p.mediaMetadata, p.duration)
         updateShadowQueue()
