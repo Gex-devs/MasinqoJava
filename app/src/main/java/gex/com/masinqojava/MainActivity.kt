@@ -193,6 +193,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btn_next).setOnClickListener {
             controller?.seekToNextMediaItem()
         }
+
         lifecycleScope.launch {
             viewModel.currentMetadata.collect { metadata ->
                 metadata?.let { updateMiniPlayerUI(it) }
@@ -203,7 +204,6 @@ class MainActivity : AppCompatActivity() {
                 progressBar.progress = position.toInt()
             }
         }
-
         lifecycleScope.launch {
             viewModel.isPlaying.collect { isPlaying ->
                 updatePlayPauseIcon(isPlaying)
